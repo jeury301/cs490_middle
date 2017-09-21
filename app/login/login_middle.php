@@ -27,24 +27,6 @@ $response = array(
 );
 
 /*
- * In case of a Curl error trying to authenticate with NJIT, encode this
- * as JSON, echo it, and exit the script
- */
-$njit_authentication_error = array(
-    "httpStatus" => 500,
-    "error" => "Unexpected error attempting to authenticate with NJIT portal.",
-);
-
-/*
- * In case of a Curl error trying to communicate with the database, encode this
- * as JSON, echo it, and exit the script
- */
-$db_authentication_error = array(
-    "httpStatus" => 500,
-    "error" => "Unexpected error attempting to authenticate back end database.",
-);
-
-/*
  * Must first save JSON post data as separate variable, *THEN* parse 
  * it as PHP array.
  * 
@@ -53,6 +35,20 @@ $db_authentication_error = array(
  */
 $raw_json_string = $_POST['json_string'];
 $parsed_post_data = json_decode($raw_json_string, true);
+
+/*
+ * If either "username" and "plaintext_password" isn't a key in array
+ * $parsed_post_data, return JSON with error message and exit the script
+ */
+if (!array_key_exists('username', $parsed_post_data) || 
+    !array_key_exists('plaintext_password', $parsed_post_data) )  {
+    $bad_request_error = array(
+        "httpStatus" => 400,
+        "error" => "Bad request: malformed POST data",
+    );
+    http_response_code(400);
+    exit(json_encode($bad_request_error));
+}
 
 /*
  * Here, we are sending a POST request to the backend server
@@ -124,8 +120,25 @@ function curl_to_backend($header, $url, $post) {
         CURLOPT_POSTFIELDS => $post,    // NOTE: $post is a *query string*, NOT a PHP array
     ));
 
-    // Execute the Curl request and return response
+    // Execute the Curl request
     $response_data = curl_exec($curl_obj);
+
+    /*
+     * In case of a Curl error trying to communicate with the database,
+     * return JSON with error message and exit the script
+     */
+    $err = curl_error($curl_obj);
+    if ($err) {
+        http_response_code(500);
+        $curl_error = array(
+            "httpStatus" => 500,
+            "error" =>  "cURL Error: " . $err,
+        );
+        curl_close($curl);
+        exit(json_encode($curl_error));
+    } 
+
+    // Return response
     curl_close($curl_obj);
     return ($response_data); 
 }
@@ -152,8 +165,25 @@ function spoof_njit_login($header, $url, $post) {
         CURLOPT_COOKIEFILE => realpath($cookie),    // Where cookies are read from
     ));
 
-    // Execute the Curl request and return response
+    // Execute the Curl request
     $response_data = curl_exec($curl_obj);
+
+    /*
+     * In case of a Curl error trying to spoof the NJIT login form,
+     * return JSON with error message and exit the script
+     */
+    $err = curl_error($curl_obj);
+    if ($err) {
+        http_response_code(500);
+        $curl_error = array(
+            "httpStatus" => 500,
+            "error" =>  "cURL Error (NJIT Login): " . $err,
+        );
+        curl_close($curl);
+        exit(json_encode($curl_error));
+    } 
+
+    // Return response
     curl_close($curl_obj);
     return ($response_data); 
 }
