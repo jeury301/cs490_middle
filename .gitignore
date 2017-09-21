@@ -1,4 +1,4 @@
-ompiled source #
+Compiled source #
 ###################
 *.com
 *.class
@@ -41,4 +41,6 @@ Thumbs.db
 *~
 *un~
 
+# Sublime Text extension stuff #
+################################
 sftp-config.json

@@ -1,155 +1,161 @@
 <?php
-// Response that will be eventually encoded to JSON and returned to front end
+
+/**
+ * login_middle.php
+ *
+ * Created by Michael Anderson on September 15, 2017 at 9:29 PM
+ *
+ * Receives JSON from front-end as $_POST['json_string'] containing
+ * username and plaintext password values.  Makes two CURL
+ * requests: 1.) POST to NJIT login page to attempt to authenticate
+ * using credentials received from front end and 2.) POST to back end
+ * DB server with username.  Request to backend server returns hashed
+ * password and salt, which is verified against plaintext password.
+ * Script returns JSON object to front end indicating whether 
+ * authentication was successful with NJIT login and/or user record
+ * in project's database.
+ */
+
+/*
+ * Response object that will be eventually encoded to JSON and 
+ * returned to front end.  By default, "njitLoginSuccess" and 
+ * "dbLoginSuccess" are false 
+ */
 $response = array(
-    "njitLoginSuccess" => False,
-    "dbLoginSuccess" => False,
+    "njitLoginSuccess" => false,
+    "dbLoginSuccess" => false,
 );
 
-$njitAuthenticationError = array(
+/*
+ * In case of a Curl error trying to authenticate with NJIT, encode this
+ * as JSON, echo it, and exit the script
+ */
+$njit_authentication_error = array(
     "httpStatus" => 500,
-    "error" => "Unexpected error attempting to authenticate with NJIT portal",
+    "error" => "Unexpected error attempting to authenticate with NJIT portal.",
 );
 
-$dbAuthenticationError = array(
+/*
+ * In case of a Curl error trying to communicate with the database, encode this
+ * as JSON, echo it, and exit the script
+ */
+$db_authentication_error = array(
     "httpStatus" => 500,
-    "error" => "Unexpected error attempting to authenticate back end database",
+    "error" => "Unexpected error attempting to authenticate back end database.",
 );
 
-
+/*
+ * Must first save JSON post data as separate variable, *THEN* parse 
+ * it as PHP array.
+ * 
+ * Also, note that json_decode() will return an object, not an  
+ * associative array unless true is passed as a second parameter. 
+ */
 $raw_json_string = $_POST['json_string'];
-
-// echo "Value of raw_json_string: $raw_json_string <br/>";
-
-
-$data = json_decode($raw_json_string, true);
-
-// echo "Here is the value of the parsed-JSON array data: <br/>";
-// print_r($data);
-// echo "<br/>";
-
-// echo "If this goes right, you should have your username and password echoed back to you: <br/>";
-// echo "username: " . $data['username'] . "<br/>";
-// echo "plaintext_password: " . $data['plaintext_password'] . "<br/>";
-
-
-// echo "at line 32";
-
+$parsed_post_data = json_decode($raw_json_string, true);
 
 /*
  * Here, we are sending a POST request to the backend server
- * with a single key/value pair- username:$data['username'],
+ * with a single key/value pair: username=$parsed_post_data['username'],
  * We expect to receive JSON containing the corresponding 
  * password hash-and-salt string in response
  */
-$curl = curl_init();
-
-curl_setopt_array($curl, array(
-  CURLOPT_URL => "https://web.njit.edu/~ps592/cs_490/app/login/login_back.php",
-  CURLOPT_RETURNTRANSFER => true,
-  CURLOPT_ENCODING => "",
-  CURLOPT_MAXREDIRS => 10,
-  CURLOPT_TIMEOUT => 30,
-  CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-  CURLOPT_CUSTOMREQUEST => "POST",
-  CURLOPT_POSTFIELDS => "------WebKitFormBoundary7MA4YWxkTrZu0gW\r\nContent-Disposition: form-data; name=\"username\"\r\n\r\n" . $data['username'] . "\r\n------WebKitFormBoundary7MA4YWxkTrZu0gW--",
-  CURLOPT_HTTPHEADER => array(
-    "cache-control: no-cache",
-    "content-type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW",
-    "postman-token: 093aaaa1-ba89-895a-4bfa-200429187ddb"
-  ),
-));
-
-$backend_json_response = curl_exec($curl);
-$err = curl_error($curl);
-curl_close($curl);
-
-// echo "Response from backend server:<br/>";
-// if ($err) {
-//   echo "cURL Error #:" . $err;
-// } else {
-//   echo $backendJsonResponse;
-// }
-
+$post_params = array(
+  "username" => $parsed_post_data['username'],
+);
+$backend_endpoint = "https://web.njit.edu/~ps592/cs_490/app/login/login_back.php";
+$header = array(); // Function takes a header arg, but not necessary here
+$backend_json_response = curl_to_backend($header, $backend_endpoint, http_build_query($post_params));
 $parsed_backend_response = json_decode($backend_json_response, true);
 
-// echo "-------- BEGIN DEBUGGING MSG --------<br/>";
-// echo "Value of backendJsonResponse:<br/>";
-// echo $backend_json_response;
-// echo "--------- END DEBUGGING MSG ---------<br/>";
-
-
-// print_r($parsed_backend_response);
-
-// echo "-------- BEGIN DEBUGGING MSG --------<br/>";
-// echo 'Value of $data[\'plaintext_password\']:<br/>';
-// echo $data['plaintext_password'];
-// echo 'Value of $parsed_backend_response[\'hashed_password\']:<br/>';
-// echo $parsed_backend_response['hashed_password'];
-// echo "<br/>";
-// echo "--------- END DEBUGGING MSG ---------<br/>";
-
-
-// Check whether password ma
-if (password_verify($data['plaintext_password'], $parsed_backend_response['hashed_password'])) {
+/*
+ * Check whether password matches hash/salt retrieved from DB.
+ * If so, update $response array
+ */
+if (password_verify($parsed_post_data['plaintext_password'], 
+    $parsed_backend_response['hashed_password'])) {
     // echo "Password matches<br/>";
     $response['dbLoginSuccess'] = True;
 }
 
-
 /*
  * Attempt to authenticate with NJIT Highlander Pipeline login 
- * using credentials passed from front end 
+ * using credentials passed from front end.
+ * 
+ * Form we are trying to spoof is at https://www6.njit.edu/cp/login.php
+ * Line refererences refer to that page's source
  */
-$post['user'] = $data['username'];
-$post['pass'] = $data['plaintext_password'];
-$post['uuid'] = '0xACA021';                         // This is hard-coded in the NJIT page source code
-$highlanderPipelineURL = "https://cp4.njit.edu/cp/home/login";
-$header['Upgrade-Insecure-Requests'] = 1;
-$njitResponse = spoof_njit_login($header, $highlanderPipelineURL, http_build_query($post));
+$post_params = array(
+  "user" => $parsed_post_data['username'],    // 'user' is hidden field (Line 184)
+  "pass" => $parsed_post_data['plaintext_password'],
+  "uuid" => '0xACA021',     // 'uuid' is hidden field (Line 184) hard-coded to 0xACA021
+);
+$highlander_pipeline_url = "https://cp4.njit.edu/cp/home/login";
+$header = array(); // Function takes a header arg (an array), but not necessary here
+$njitResponse = spoof_njit_login($header, $highlander_pipeline_url, http_build_query($post_params));
 
 /*
  * If the NJIT Authentication is successful, the response will 
  * include the string "Login Successful".  If that text is found
- * in $njitResponse, set $response['njitLoginSuccess'] to true
+ * in $njitResponse, update $response array
  */
 if (strpos($njitResponse, 'Login Successful') !== false) {
     $response['njitLoginSuccess'] = True;
 }
 
-
-function spoof_njit_login($header = array(), $url, $post = false) {       
-    $cookie = "cookie.txt";
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_ENCODING, 'gzip,deflate,sdch');
-    if (isset($header) && !empty($header))
-    {
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $header);
-
-    }
-    curl_setopt($ch, CURLOPT_URL, $url);
-    curl_setopt($ch, CURLOPT_HEADER, 0);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 200);
-    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-    curl_setopt($ch, CURLOPT_MAXREDIRS, 5);
-    curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36");
-    curl_setopt($ch, CURLOPT_COOKIEJAR, realpath($cookie));
-    curl_setopt($ch, CURLOPT_COOKIEFILE, realpath($cookie));
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-    curl_setopt($ch, CURLOPT_REFERER, $url);
-
-    //if it's a POST request instead of GET
-    if (isset($post) && !empty($post) && $post)
-    {
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $post);
-    }
-    $data = curl_exec($ch);
-    curl_close($ch);
-    return ($data);     //this will return page on successful, false otherwise
-}
-
+// Return JSON response to the front end
 echo json_encode($response);
 
+function curl_to_backend($header, $url, $post) {       
+    $curl_obj = curl_init();
+
+    // Set Curl options (See http://php.net/manual/en/function.curl-setopt-array.php)
+    curl_setopt_array($curl_obj, array(
+        CURLOPT_URL => $url,
+        CURLOPT_FOLLOWLOCATION => 1,    // True - Follow HTTP 3xx redirects (probably unneeded)
+        CURLOPT_MAXREDIRS => 10,        // Max no. of redirects to follow (see above)
+        CURLOPT_RETURNTRANSFER => 1,    // Sets return value of curl_exec to true
+        CURLOPT_ENCODING => "",         // If "", header containing all supported encoding types is sent
+        CURLOPT_TIMEOUT => 30,          // In seconds
+        CURLOPT_USERAGENT => "Mozilla/5.0 (Windows NT 5.1; rv:31.0) Gecko/20100101 Firefox/31.0",
+        CURLOPT_HEADER => 0,            // False - DON'T incude response header in output
+        CURLOPT_HTTPHEADER => $header,  // A PHP array of HTTP header fields
+        CURLOPT_POST => 1,              // True - This is a post request
+        CURLOPT_POSTFIELDS => $post,    // NOTE: $post is a *query string*, NOT a PHP array
+    ));
+
+    // Execute the Curl request and return response
+    $response_data = curl_exec($curl_obj);
+    curl_close($curl_obj);
+    return ($response_data); 
+}
+
+function spoof_njit_login($header, $url, $post) {       
+    $cookie = "cookie.txt"; // Required, since NJIT portal sets cookie, then checks for it
+    $curl_obj = curl_init();
+
+    // Set Curl options (See http://php.net/manual/en/function.curl-setopt-array.php)
+    curl_setopt_array($curl_obj, array(
+        CURLOPT_URL => $url,
+        CURLOPT_FOLLOWLOCATION => 1,    // True - Follow HTTP 3xx redirects (NJIT will redirect)
+        CURLOPT_MAXREDIRS => 10,        // Max no. of redirects to follow (see above)
+        CURLOPT_RETURNTRANSFER => 1,    // Sets return value of curl_exec to true
+        CURLOPT_ENCODING => "",         // If "", header containing all supported encoding types is sent
+        CURLOPT_TIMEOUT => 30,          // In seconds
+        CURLOPT_USERAGENT => "Mozilla/5.0 (Windows NT 5.1; rv:31.0) Gecko/20100101 Firefox/31.0",
+        CURLOPT_REFERER => $url,        // Make it look like request originated from $url
+        CURLOPT_HEADER => 0,            // False - DON'T incude response header in output
+        CURLOPT_HTTPHEADER => $header,  // A PHP array of HTTP header fields
+        CURLOPT_POST => 1,              // True - This is a post request
+        CURLOPT_POSTFIELDS => $post,    // NOTE: $post is a *query string*, NOT a PHP array
+        CURLOPT_COOKIEJAR => realpath($cookie),     // Where cookies are stored
+        CURLOPT_COOKIEFILE => realpath($cookie),    // Where cookies are read from
+    ));
+
+    // Execute the Curl request and return response
+    $response_data = curl_exec($curl_obj);
+    curl_close($curl_obj);
+    return ($response_data); 
+}
 
 ?>
