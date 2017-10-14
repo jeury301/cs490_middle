@@ -52,7 +52,7 @@ if (!isset($parsed_post_data['username']) ||
                                   'missing from JSON POST data received from front end'
     );
     http_response_code(400);
-    //header('Content-Type: application/json');
+    header('Content-Type: application/json');
     exit(json_encode($error_response));
 }
 
@@ -104,7 +104,7 @@ if (password_verify($parsed_post_data['plaintext_password'],
         "action" => "login",
         "status" => "successful",
         "role" => $role,
-        //"items" => $parsed_backend_response['items']
+        "items" => $parsed_backend_response['items']
     );
 } else {
     $response = array(
@@ -112,7 +112,9 @@ if (password_verify($parsed_post_data['plaintext_password'],
         "status" => "error",
         "role" => $role,
         "user_message" => "Login failed.  Unknown username/password combination.",
-        "internal_message" => "User password did not match hash."
+        "internal_message" => "User password did not match hash.",
+        // "parsed_backend_response" => json_encode($parsed_backend_response),
+        // "backend_json_response" => $backend_json_response
     );
 }
 
