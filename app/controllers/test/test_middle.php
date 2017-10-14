@@ -7,3 +7,6 @@
  *
  * @TODO: Add description 
  */
+
+require '../../services/initial_json_parse.php';
+require '../../services/curl_functions.php';
