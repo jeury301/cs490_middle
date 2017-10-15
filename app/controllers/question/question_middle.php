@@ -1,8 +1,9 @@
 <?php
-
+/*
 ini_set('display_startup_errors', 1);
 ini_set('display_errors', 1);
 error_reporting(-1);
+*/
 
 /**
  * question_middle.php
@@ -81,7 +82,8 @@ $new_post_params = array("json_string" => json_encode($to_be_converted_to_json))
 // Function takes a header arg, but not necessary here
 $header = array(); 
 
-/* Make the CURL request 
+/* 
+ * Make the CURL request 
  *
  * The function curl_to_backend will handle configuring the
  * CURL request and checking if there is a CURL error, and,

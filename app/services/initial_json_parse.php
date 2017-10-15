@@ -5,9 +5,8 @@
  *
  * Created by Michael Anderson on September 10, 2017
  *
- * Parses the JSON received from the front and confirm
- * that it contains the 'action' key and a valid 'action'
- * value. 
+ * Parses the JSON received from the front and perform
+ * validation general to all tables.
  *
  * If parse and validate is successful, return a PHP
  * array of the parsed JSON. Else, return a PHP array

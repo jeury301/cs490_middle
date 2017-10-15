@@ -62,10 +62,10 @@ if (!isset($parsed_post_data['username']) ||
 
 // Case-insensitive string comparison
 if (strcasecmp($parsed_post_data['role'], 'student') == 0) {
-    $backend_endpoint = $BACKEND_ENDPOINTS["student"];
+    $backend_endpoint = $BACKEND_ENDPOINTS["loginStudent"];
     $role = "student";
 } else if (strcasecmp($parsed_post_data['role'], 'professor') == 0) {
-    $backend_endpoint = $BACKEND_ENDPOINTS["professor"];
+    $backend_endpoint = $BACKEND_ENDPOINTS["loginProfessor"];
     $role = "professor";
 } else {
     // If invalid value for 'role', return an error
@@ -115,8 +115,10 @@ if (password_verify($parsed_post_data['plaintext_password'],
         "role" => $role,
         "user_message" => "Login failed.  Unknown username/password combination.",
         "internal_message" => "login_middle.php: User password did not match hash.",
-        // "parsed_backend_response" => json_encode($parsed_backend_response),
-        // "backend_json_response" => $backend_json_response
+        "parsed_backend_response" => $parsed_backend_response,
+        "backend_json_response" => $backend_json_response,
+        "value of parsed_post_data['plaintext_password']" => $parsed_post_data['plaintext_password'],
+        "value of parsed_backend_response['items'][0]['hash_salt']))" => $parsed_backend_response['items'][0]['hash_salt']
     );
 }
 
