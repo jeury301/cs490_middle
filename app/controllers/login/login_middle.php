@@ -22,6 +22,7 @@ error_reporting(-1);
 
 require '../../services/initial_json_parse.php';
 require '../../services/curl_functions.php';
+$BACKEND_ENDPOINTS = include '../../backend_endpoints.php';
 
 // Preliminarily validate and parse JSON received as POST data
 $parsed_post_data = initial_json_parse();
@@ -48,8 +49,9 @@ if (!isset($parsed_post_data['username']) ||
             "action" => "login",
             "status" => "error",
             "user_message" => "An error has occured.",
-            "internal_message" => 'Error: key `username`, `role` or `plaintext_password` ' .
-                                  'missing from JSON POST data received from front end'
+            "internal_message" => 'login_middle.php: Error: key `username`, `role` or ' .
+                                  '`plaintext_password` missing from JSON POST data ' .
+                                  'received from front end'
     );
     http_response_code(400);
     header('Content-Type: application/json');
@@ -60,10 +62,10 @@ if (!isset($parsed_post_data['username']) ||
 
 // Case-insensitive string comparison
 if (strcasecmp($parsed_post_data['role'], 'student') == 0) {
-    $backend_endpoint = "https://web.njit.edu/~ps592/cs_490/app/controllers/student/student_back.php";
+    $backend_endpoint = $BACKEND_ENDPOINTS["student"];
     $role = "student";
 } else if (strcasecmp($parsed_post_data['role'], 'professor') == 0) {
-    $backend_endpoint = "https://web.njit.edu/~ps592/cs_490/app/controllers/professor/professor_back.php";
+    $backend_endpoint = $BACKEND_ENDPOINTS["professor"];
     $role = "professor";
 } else {
     // If invalid value for 'role', return an error
@@ -71,8 +73,8 @@ if (strcasecmp($parsed_post_data['role'], 'student') == 0) {
             "action" => "login",
             "status" => "error",
             "user_message" => "An error has occured.",
-            "internal_message" => 'Error: invalid value for key `role`. Expecting '. 
-                                  '`professor` or `student`.'
+            "internal_message" => 'login_middle.php: Error: invalid value for key '. 
+                                  '`role`. Expecting `professor` or `student`.'
     );
     http_response_code(400);
     header('Content-Type: application/json');
@@ -112,13 +114,13 @@ if (password_verify($parsed_post_data['plaintext_password'],
         "status" => "error",
         "role" => $role,
         "user_message" => "Login failed.  Unknown username/password combination.",
-        "internal_message" => "User password did not match hash.",
+        "internal_message" => "login_middle.php: User password did not match hash.",
         // "parsed_backend_response" => json_encode($parsed_backend_response),
         // "backend_json_response" => $backend_json_response
     );
 }
 
-// Return JSON response to the front end
+// Return CURL response to the front end
 http_response_code(200);
 header('Content-Type: application/json');
 exit(json_encode($response));

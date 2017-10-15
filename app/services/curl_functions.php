@@ -39,7 +39,7 @@ function curl_to_backend($header, $url, $post) {
             "action" => "login",
             "status" => "error",
             "user_message" => "An error has occured.",
-            "internal_message" => "CURL error from Middle to Back: $err"
+            "internal_message" => "curl_functions.php: CURL error from Middle to Back: $err"
     );
         curl_close($curl);
         http_response_code(500);
