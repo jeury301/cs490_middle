@@ -114,11 +114,7 @@ if (password_verify($parsed_post_data['plaintext_password'],
         "status" => "error",
         "role" => $role,
         "user_message" => "Login failed.  Unknown username/password combination.",
-        "internal_message" => "login_middle.php: User password did not match hash.",
-        "parsed_backend_response" => $parsed_backend_response,
-        "backend_json_response" => $backend_json_response,
-        "value of parsed_post_data['plaintext_password']" => $parsed_post_data['plaintext_password'],
-        "value of parsed_backend_response['items'][0]['hash_salt']))" => $parsed_backend_response['items'][0]['hash_salt']
+        "internal_message" => "login_middle.php: User password did not match hash."
     );
 }
 

@@ -71,13 +71,10 @@ if ($action == "insert") {
 /*
  * Here, we are sending a POST request to the backend server with
  * a single key-value pair sent as form data: json_string, which 
- * in turn contains JSON data we encoded from an array
+ * in turn contains modified JSON data we received from the front
  */
-$to_be_converted_to_json = array("action" => $action,
-                                 "table_name" => $table_name,
-                                 "fields" => $fields
-                                );
-$new_post_params = array("json_string" => json_encode($to_be_converted_to_json));
+$parsed_post_data["table_name"] = $table_name;
+$new_post_params = array("json_string" => json_encode($parsed_post_data));
 
 // Function takes a header arg, but not necessary here
 $header = array(); 
