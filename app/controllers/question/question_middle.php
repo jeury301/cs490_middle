@@ -1,10 +1,4 @@
 <?php
-/*
-ini_set('display_startup_errors', 1);
-ini_set('display_errors', 1);
-error_reporting(-1);
-*/
-
 /**
  * question_middle.php
  *
@@ -19,6 +13,11 @@ error_reporting(-1);
  * to the back end, and the back-end response will
  * in turn be returned to the front as JSON.
  */
+
+// Uncomment to turn debug mode on:
+// ini_set('display_startup_errors', 1);
+// ini_set('display_errors', 1);
+// error_reporting(-1);
 
 require '../../services/initial_json_parse.php';
 require '../../services/curl_functions.php';
@@ -35,9 +34,8 @@ $action = $parsed_post_data["action"];
 $table_name = "question";
 
 /*
- * Set $fields to $parsed_post_data["fields"]
- *
- * If there is no "fields" array in the parsed JSON, 
+ * Set $fields to $parsed_post_data["fields"], or, if 
+ * there is no "fields" array in the parsed JSON, 
  * instantiate an empty array and set $fields to it
  *
  * There are valid reasons to have an empty "fields"
@@ -71,17 +69,14 @@ if ($action == "insert") {
 /*
  * Here, we are sending a POST request to the backend server with
  * a single key-value pair sent as form data: json_string, which 
- * in turn contains modified JSON data we received from the front
+ * in turn contains sanitized and otherwise modified JSON data we 
+ * received from the front
  */
 $parsed_post_data["table_name"] = $table_name;
 $new_post_params = array("json_string" => json_encode($parsed_post_data));
-
 // Function takes a header arg, but not necessary here
 $header = array(); 
-
 /* 
- * Make the CURL request 
- *
  * The function curl_to_backend will handle configuring the
  * CURL request and checking if there is a CURL error, and,
  * if so, returning the appropriate error JSON response
@@ -91,10 +86,7 @@ $backend_json_response = curl_to_backend($header,
                                          http_build_query($new_post_params));
 $parsed_backend_response = json_decode($backend_json_response, true);
 
-//echo $backend_json_response;
-//print_r($parsed_backend_response);
-
-// Return CURL response to the front end
+// Return response to the front end
 http_response_code(200);
 header('Content-Type: application/json');
 exit(json_encode($parsed_backend_response));

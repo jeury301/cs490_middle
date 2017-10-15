@@ -19,10 +19,10 @@ $insertJsonPayloads = array(
     "test_case" => '{"action":"insert", "table_name":"test_case", "fields":{"question_id":10,"input":"DummyTestCase' . $time .'", "output":"output_val goes here, or more"}}',
     "student" => '{"action":"insert", "table_name":"student", "fields":{"user_name":"DummyStudent' . $time .'", "hash_salt":"$2y$10$BBp8BHUg9rfwFrOqLLeMY.c0SimhUAyW3J8K3.qwY500lcnT1ccPGEND"}}',
     "professor" => '{"action":"insert", "table_name":"professor", "fields":{"user_name":"DummyProf' . $time .'", "hash_salt":"$2y$10$BBp8BHUg9rfwFrOqLLeMY.c0SimhUAyW3J8K3.qwY500lcnT1ccPGEND"}}',
-    "test" => '{"action":"insert", "table_name":"test", "fields":{"professor_id":1,"scores_released":0,"finalized":0}}',
-    "question_answer" => '{"action":"insert", "table_name":"question_answer", "fields":{"question_id":1,"test_id":1,"student_id":1,"answer_text":"echo $helloworld","grade":100,"notes":"lorem ipsum"}}',
-    "test_question" => '{"action":"insert", "table_name":"test_question", "fields":{"test_id":1,"question_id":1}}',
-    "test_score" => '{"action":"insert", "table_name":"test_score", "fields":{"student_id":1,"test_id":1,"grade":100}}',
+    "test" => '{"action":"insert", "table_name":"test", "fields":{"professor_id":7,"scores_released":0,"finalized":0}}',
+    "question_answer" => '{"action":"insert", "table_name":"question_answer", "fields":{"question_id":5,"test_id":37,"student_id":6,"answer_text":"DummyQuestionAnswer' . $time . '","grade":100,"notes":"lorem ipsum"}}',
+    "test_question" => '{"action":"insert", "table_name":"test_question", "fields":{"test_id":37,"question_id":5}}',
+    "test_score" => '{"action":"insert", "table_name":"test_score", "fields":{"student_id":6,"test_id":35,"grade":100}}',
 );
 
 $insertedItems = array();
@@ -34,10 +34,7 @@ for ($i=0; $i<count($keysArray); $i++) {
     $json = $insertJsonPayloads[$keysArray[$i]];
     $backend_endpoint = $BACKEND_ENDPOINTS["insert"];
     $new_post_params = array("json_string" => $json);
-
-    // Function takes a header arg, but not necessary here
     $header = array(); 
-    // Make the CURL request
     $backend_json_response = curl_to_backend($header, 
                                              $backend_endpoint, 
                                              http_build_query($new_post_params));
@@ -57,6 +54,71 @@ for ($i=0; $i<count($keysArray); $i++) {
 echo "============================<br/>";
 echo 'Value of $insertedItems: <br/>';
 print_r($insertedItems);
+
+echo '<br/>';
+echo "============================<br/>";
+echo "<h1>EDIT TEST:</h1></br>";
+
+$editJsonPayloads = array(
+    "question" => '{"primary_key":"' . $insertedItems["question"]["primary_key"] .'","action":"edit", "table_name":"question", "fields":{"question_text":"DummyQuestionEDITED' . $time . '", "func_name":"My dumb test functionEDITED", "param_names":"7, 6, 5, 4, 3, EDITED"}}',
+    "test_case" => '{"primary_key":"' . $insertedItems["test_case"]["primary_key"] .'","action":"edit", "table_name":"test_case", "fields":{"question_id":10,"input":"DummyTestCaseEDITED' . $time .'", "output":"output_val goes here, or moreEDITED"}}',
+    "student" => '{"primary_key":"' . $insertedItems["student"]["primary_key"] .'","action":"edit", "table_name":"student", "fields":{"user_name":"DummyStudent' . $time .'", "hash_salt":"$2y$10$BBp8BHUg9rfwFrOqLLeMY.c0SimhUAyW3J8K3.qwY500lcnT1ccPGENDEDITED"}}',
+    "professor" => '{"primary_key":"' . $insertedItems["professor"]["primary_key"] .'","action":"edit", "table_name":"professor", "fields":{"user_name":"DummyProf' . $time .'", "hash_salt":"$2y$10$BBp8BHUg9rfwFrOqLLeMY.c0SimhUAyW3J8K3.qwY500lcnT1ccPGENDEDITED"}}',
+    "test" => '{"primary_key":"' . $insertedItems["test"]["primary_key"] .'","action":"edit", "table_name":"test", "fields":{"professor_id":7,"scores_released":1,"finalized":1}}',
+    "question_answer" => '{"primary_key":"' . $insertedItems["question_answer"]["primary_key"] .'","action":"edit", "table_name":"question_answer", "fields":{"question_id":5,"test_id":37,"student_id":6,"answer_text":"DummyQuestionAnswerEDITED' . $time . '","grade":100,"notes":"lorem ipsum"}}',
+    "test_question" => '{"primary_key":"' . $insertedItems["test_question"]["primary_key"] .'","action":"edit", "table_name":"test_question", "fields":{"test_id":38,"question_id":5}}',
+    "test_score" => '{"primary_key":"' . $insertedItems["test_score"]["primary_key"] .'","action":"edit", "table_name":"test_score", "fields":{"student_id":6,"test_id":35,"grade":50}}',
+);
+
+//print_r($editJsonPayloads);
+
+foreach($insertedItems as $key => $value) {
+    echo "============================<br/>";
+    $json = $editJsonPayloads[$key];
+    $backend_endpoint = $BACKEND_ENDPOINTS["edit"];
+    $new_post_params = array("json_string" => $json);
+    $header = array(); 
+    $backend_json_response = curl_to_backend($header, 
+                                             $backend_endpoint, 
+                                             http_build_query($new_post_params));
+    $parsed_response = json_decode($backend_json_response,true);
+    if ($parsed_response["status"] == "success") {
+        echo "Successfully edited $key with primary_key " . $value["primary_key"] . "</br>";
+    } else {
+        echo '<font color= "red"> ERROR </font> trying to edit item with primary_key ' . $value["primary_key"] . "</br>";
+    }
+    echo "Response received from back end: </br>";
+    echo $backend_json_response;
+    echo "</br>";
+}
+
+echo '<br/>';
+echo "============================<br/>";
+echo "<h1>LIST TEST:</h1></br>";
+
+foreach($insertedItems as $key => $value) {
+    echo "============================<br/>";
+    $json = '{"action":"list", "table_name":"'. $key .'", "fields":{"primary_key":"' . $value["primary_key"] .'"}}';
+    $backend_endpoint = $BACKEND_ENDPOINTS["list"];
+    $new_post_params = array("json_string" => $json);
+
+    // Function takes a header arg, but not necessary here
+    $header = array(); 
+    // Make the CURL request
+    $backend_json_response = curl_to_backend($header, 
+                                             $backend_endpoint, 
+                                             http_build_query($new_post_params));
+    $parsed_response = json_decode($backend_json_response,true);
+    if ($parsed_response["status"] == "success") {
+        echo "Successfully queried $key for record with primary_key " . $value["primary_key"] . "</br>";
+    } else {
+        echo '<font color= "red"> ERROR </font> trying to query item with primary_key ' . $value["primary_key"] . "</br>";
+    }
+    echo "Response received from back end: </br>";
+    echo $backend_json_response;
+    echo "</br>";
+}
+
 echo '<br/>';
 echo "============================<br/>";
 echo "<h1>DELETE TEST:</h1></br>";
@@ -75,7 +137,7 @@ foreach($insertedItems as $key => $value) {
                                              http_build_query($new_post_params));
     $parsed_response = json_decode($backend_json_response,true);
     if ($parsed_response["status"] == "success") {
-        echo "Successfully deleted item with primary_key " . $value["primary_key"] . "</br>";
+        echo "Successfully deleted $key with primary_key " . $value["primary_key"] . "</br>";
     } else {
         echo '<font color= "red"> ERROR </font> trying to delete item with primary_key ' . $value["primary_key"] . "</br>";
     }
@@ -83,5 +145,6 @@ foreach($insertedItems as $key => $value) {
     echo $backend_json_response;
     echo "</br>";
 }
+
 
 
