@@ -36,7 +36,7 @@ function curl_to_backend($header, $url, $post) {
     if ($err) {
         http_response_code(500);
         $curl_error = array(
-            "action" => "login",
+            "action" => "unknown",
             "status" => "error",
             "user_message" => "An error has occured.",
             "internal_message" => "curl_functions.php: CURL error from Middle to Back: $err"

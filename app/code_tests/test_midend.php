@@ -6,7 +6,7 @@ ini_set('display_errors', 1);
 error_reporting(-1);
 
 require '../services/curl_functions.php';
-$BACKEND_ENDPOINTS = include '../backend_endpoints.php';
+$MIDEND_ENDPOINTS = include '../midend_endpoints.php';
 
 $error_count = 0;
 
@@ -17,14 +17,14 @@ $time = time();
 echo "<h1>INSERT TEST:</h1></br>";
 
 $insertJsonPayloads = array(
-    "question" => '{"action":"insert", "table_name":"question", "fields":{"question_text":"DummyQuestion' . $time . '", "func_name":"My dumb test function", "param_names":"7, 6, 5, 4, 3"}}',
-    "test_case" => '{"action":"insert", "table_name":"test_case", "fields":{"question_id":10,"input":"DummyTestCase' . $time .'", "output":"output_val goes here, or more"}}',
-    "student" => '{"action":"insert", "table_name":"student", "fields":{"user_name":"DummyStudent' . $time .'", "hash_salt":"$2y$10$BBp8BHUg9rfwFrOqLLeMY.c0SimhUAyW3J8K3.qwY500lcnT1ccPGEND"}}',
-    "professor" => '{"action":"insert", "table_name":"professor", "fields":{"user_name":"DummyProf' . $time .'", "hash_salt":"$2y$10$BBp8BHUg9rfwFrOqLLeMY.c0SimhUAyW3J8K3.qwY500lcnT1ccPGEND"}}',
-    "test" => '{"action":"insert", "table_name":"test", "fields":{"professor_id":7,"scores_released":0,"finalized":0}}',
-    "question_answer" => '{"action":"insert", "table_name":"question_answer", "fields":{"question_id":5,"test_id":37,"student_id":6,"answer_text":"DummyQuestionAnswer' . $time . '","grade":100,"notes":"lorem ipsum"}}',
-    "test_question" => '{"action":"insert", "table_name":"test_question", "fields":{"test_id":37,"question_id":5}}',
-    "test_score" => '{"action":"insert", "table_name":"test_score", "fields":{"student_id":6,"test_id":35,"grade":100}}',
+    "question" => '{"action":"insert", "fields":{"question_text":"DummyQuestion' . $time . '", "func_name":"My dumb test function", "param_names":"7, 6, 5, 4, 3"}}',
+    "test_case" => '{"action":"insert", "fields":{"question_id":10,"input":"DummyTestCase' . $time .'", "output":"output_val goes here, or more"}}',
+    "student" => '{"action":"insert", "fields":{"user_name":"DummyStudent' . $time .'", "hash_salt":"$2y$10$BBp8BHUg9rfwFrOqLLeMY.c0SimhUAyW3J8K3.qwY500lcnT1ccPGEND"}}',
+    "professor" => '{"action":"insert", "fields":{"user_name":"DummyProf' . $time .'", "hash_salt":"$2y$10$BBp8BHUg9rfwFrOqLLeMY.c0SimhUAyW3J8K3.qwY500lcnT1ccPGEND"}}',
+    "test" => '{"action":"insert", "fields":{"professor_id":7,"scores_released":0,"finalized":0}}',
+    "question_answer" => '{"action":"insert", "fields":{"question_id":5,"test_id":37,"student_id":6,"answer_text":"DummyQuestionAnswer' . $time . '","grade":100,"notes":"lorem ipsum"}}',
+    "test_score" => '{"action":"insert", "fields":{"student_id":6,"test_id":35,"grade":100}}',
+    "test_question" => '{"action":"insert", "fields":{"test_id":37,"question_id":5}}',
 );
 
 $insertedItems = array();
@@ -32,13 +32,13 @@ $keysArray = array_keys($insertJsonPayloads);
 
 for ($i=0; $i<count($keysArray); $i++) {
     echo "============================<br/>";
-    echo "Trying to insert record into " . $keysArray[$i] . " table...</br>";
+    echo "Trying to insert record into " . $keysArray[$i] . " table at url (".$MIDEND_ENDPOINTS[$keysArray[$i]].")...</br>";
     $json = $insertJsonPayloads[$keysArray[$i]];
-    $backend_endpoint = $BACKEND_ENDPOINTS["insert"];
+    $midend_endpoint = $MIDEND_ENDPOINTS[$keysArray[$i]];
     $new_post_params = array("json_string" => $json);
     $header = array(); 
     $backend_json_response = curl_to_backend($header, 
-                                             $backend_endpoint, 
+                                             $midend_endpoint, 
                                              http_build_query($new_post_params));
     $parsed_response = json_decode($backend_json_response,true);
     if ($parsed_response["status"] == "success") {
@@ -49,7 +49,7 @@ for ($i=0; $i<count($keysArray); $i++) {
         echo '<font color= "red"> ERROR </font> trying to ' . $keysArray[$i] . "</br>";
         $error_count++;
     }
-    echo "Response received from back end: </br>";
+    echo "Response received from middle end: </br>";
     echo $backend_json_response;
     echo "</br>";
 }
@@ -78,11 +78,11 @@ $editJsonPayloads = array(
 foreach($insertedItems as $key => $value) {
     echo "============================<br/>";
     $json = $editJsonPayloads[$key];
-    $backend_endpoint = $BACKEND_ENDPOINTS["edit"];
+    $midend_endpoint = $MIDEND_ENDPOINTS[$key];
     $new_post_params = array("json_string" => $json);
     $header = array(); 
     $backend_json_response = curl_to_backend($header, 
-                                             $backend_endpoint, 
+                                             $midend_endpoint, 
                                              http_build_query($new_post_params));
     $parsed_response = json_decode($backend_json_response,true);
     if ($parsed_response["status"] == "success") {
@@ -91,7 +91,7 @@ foreach($insertedItems as $key => $value) {
         echo '<font color= "red"> ERROR </font> trying to edit item with primary_key ' . $value["primary_key"] . "</br>";
         $error_count++;
     }
-    echo "Response received from back end: </br>";
+    echo "Response received from middle end: </br>";
     echo $backend_json_response;
     echo "</br>";
 }
@@ -103,14 +103,14 @@ echo "<h1>LIST TEST:</h1></br>";
 foreach($insertedItems as $key => $value) {
     echo "============================<br/>";
     $json = '{"action":"list", "table_name":"'. $key .'", "fields":{"primary_key":"' . $value["primary_key"] .'"}}';
-    $backend_endpoint = $BACKEND_ENDPOINTS["list"];
+    $midend_endpoint = $MIDEND_ENDPOINTS[$key];
     $new_post_params = array("json_string" => $json);
 
     // Function takes a header arg, but not necessary here
     $header = array(); 
     // Make the CURL request
     $backend_json_response = curl_to_backend($header, 
-                                             $backend_endpoint, 
+                                             $midend_endpoint, 
                                              http_build_query($new_post_params));
     $parsed_response = json_decode($backend_json_response,true);
     if ($parsed_response["status"] == "success") {
@@ -119,7 +119,7 @@ foreach($insertedItems as $key => $value) {
         echo '<font color= "red"> ERROR </font> trying to query item with primary_key ' . $value["primary_key"] . "</br>";
         $error_count++;
     }
-    echo "Response received from back end: </br>";
+    echo "Response received from middle end: </br>";
     echo $backend_json_response;
     echo "</br>";
 }
@@ -131,14 +131,14 @@ echo "<h1>DELETE TEST:</h1></br>";
 foreach($insertedItems as $key => $value) {
     echo "============================<br/>";
     $json = '{"action":"delete", "table_name":"'. $key .'", "primary_key":"' . $value["primary_key"] .'", "fields":{}}';
-    $backend_endpoint = $BACKEND_ENDPOINTS["delete"];
+    $midend_endpoint = $MIDEND_ENDPOINTS[$key];
     $new_post_params = array("json_string" => $json);
 
     // Function takes a header arg, but not necessary here
     $header = array(); 
     // Make the CURL request
     $backend_json_response = curl_to_backend($header, 
-                                             $backend_endpoint, 
+                                             $midend_endpoint, 
                                              http_build_query($new_post_params));
     $parsed_response = json_decode($backend_json_response,true);
     if ($parsed_response["status"] == "success") {
@@ -147,7 +147,7 @@ foreach($insertedItems as $key => $value) {
         echo '<font color= "red"> ERROR </font> trying to delete item with primary_key ' . $value["primary_key"] . "</br>";
         $error_count++;
     }
-    echo "Response received from back end: </br>";
+    echo "Response received from middle end: </br>";
     echo $backend_json_response;
     echo "</br>";
 }
