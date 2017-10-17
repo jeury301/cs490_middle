@@ -79,14 +79,12 @@ $header = array();
 /* 
  * The function curl_to_backend will handle configuring the
  * CURL request and checking if there is a CURL error, and,
- * if so, returning the appropriate error JSON response
+ * if so, will return the appropriate error JSON response
  */
 $backend_json_response = curl_to_backend($header, 
                                          $backend_endpoint, 
                                          http_build_query($new_post_params));
-$parsed_backend_response = json_decode($backend_json_response, true);
-
 // Return response to the front end
 http_response_code(200);
 header('Content-Type: application/json');
-exit(json_encode($parsed_backend_response));
+exit($backend_json_response);
