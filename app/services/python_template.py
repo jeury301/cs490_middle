@@ -1,3 +1,3 @@
 {{function_definition}}
 
-return {{function_name}}({{parameters}})
+print({{func_name}}({{param_names}}))
