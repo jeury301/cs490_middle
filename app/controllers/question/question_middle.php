@@ -15,9 +15,9 @@
  */
 
 // Uncomment to turn debug mode on:
-// ini_set('display_startup_errors', 1);
-// ini_set('display_errors', 1);
-// error_reporting(-1);
+ini_set('display_startup_errors', 1);
+ini_set('display_errors', 1);
+error_reporting(-1);
 
 require '../../services/initial_json_parse.php';
 require '../../services/curl_functions.php';
@@ -53,10 +53,52 @@ $backend_endpoint = $BACKEND_ENDPOINTS["question"];
 
 if ($action == "insert") {
     // TODO: Do table-specific validation for insert,
+
 } else if ($action == "edit") {
     // TODO: Do table-specific validation for edit
+
 } else if ($action == "delete") {
-    // TODO: Do table-specific validation for delete
+    /*
+     * Confirm a primary_key was passed in the post data.
+     * If not, return an error message and exit
+     */
+    if (!isset($parsed_post_data["primary_key"]) ||
+         empty($parsed_post_data["primary_key"]) ) {
+        $error_msg = array(
+            "action" => "delete",
+            "status" => "error",
+            "user_message" => "Error attempting to delete question.",
+            "internal_message" => "question_middle.php: Missing primary_key in post data."
+        );
+        http_response_code(400); // Bad request
+        header('Content-Type: application/json');
+        exit(json_encode($error_msg));
+    }
+    /*
+     * Check if the question has been used in a test already.
+     * If so, prevent deletion and return an error message
+     */
+    if (has_question_been_used_in_test($parsed_post_data["primary_key"])) {
+        $error_msg = array(
+            "action" => "delete",
+            "status" => "error",
+            "user_message" => "This question cannot be deleted because it has " . 
+                              "been used already in a test.",
+            "internal_message" => "question_middle.php: Cannot delete question with " .
+                                  "primary key " . $parsed_post_data["primary_key"] . 
+                                  ". Already used as foreign key in test_question record.",
+        );
+        http_response_code(400); // Bad request
+        header('Content-Type: application/json');
+        exit(json_encode($error_msg));        
+    }
+    /*
+     * Delete all test_cases that correspond to the question
+     * before deleting the question iteself
+     */
+    delete_all_test_cases($parsed_post_data["primary_key"]);
+
+
 } else if ($action == "list") {
     // TODO: Do table-specific validation for insert
 } else {
@@ -88,3 +130,73 @@ $backend_json_response = curl_to_backend($header,
 http_response_code(200);
 header('Content-Type: application/json');
 exit($backend_json_response);
+
+function has_question_been_used_in_test($question_primary_key) {
+    global $BACKEND_ENDPOINTS;
+    $backend_endpoint = $BACKEND_ENDPOINTS["test_question"];
+    $fields = array(
+        "question_id" => $question_primary_key,
+    );
+    $data = array(
+        "action" => "list",
+        "table_name" => "test_question",
+        "fields" => $fields,
+    );
+    $post_data = array(
+        "json_string" => json_encode($data),
+    );
+    $header = array();
+    $backend_json_response = curl_to_backend($header, 
+                                             "https://web.njit.edu/~ps592/cs_490/app/controllers/request/request_parse_back.php", 
+                                             http_build_query($post_data));
+    $response = json_decode($backend_json_response, true);
+    if (isset($response["items"]) && !empty($response["items"])) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+function delete_all_test_cases($question_primary_key) {
+    global $BACKEND_ENDPOINTS;
+    $backend_endpoint = $BACKEND_ENDPOINTS["test_case"];
+    $fields = array(
+        "question_id" => $question_primary_key,
+    );
+    $data = array(
+        "action" => "list",
+        "table_name" => "test_case",
+        "fields" => $fields,
+    );
+    $post_data = array(
+        "json_string" => json_encode($data),
+    );
+    $header = array();
+    $backend_json_response = curl_to_backend($header, 
+                                             $backend_endpoint, 
+                                             http_build_query($post_data));
+    $response = json_decode($backend_json_response, true);
+    /*
+     * If there are test_cases for the question, delete them
+     */
+    if (isset($response["items"]) && !empty($response["items"])) {
+        $test_cases = $response["items"];
+        $backend_endpoint = $BACKEND_ENDPOINTS["test_case"];
+        $header = array();
+        foreach($test_cases as $test_case) {
+            $primary_key = $test_case["primary_key"];
+            $data = array(
+                "action" => "delete",
+                "table_name" => "test_case",
+                "primary_key" => $primary_key,
+                "fields" => array(),
+            );
+            $post_data = array(
+                "json_string" => json_encode($data),
+            );
+            $backend_json_response = curl_to_backend($header, 
+                                             $backend_endpoint, 
+                                             http_build_query($post_data));
+        }
+    } 
+}

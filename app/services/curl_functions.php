@@ -39,9 +39,11 @@ function curl_to_backend($header, $url, $post) {
             "action" => "unknown",
             "status" => "error",
             "user_message" => "An error has occured.",
-            "internal_message" => "curl_functions.php: CURL error from Middle to Back: $err"
+            "internal_message" => "curl_functions.php: CURL error from Middle to Back: $err " .
+                                  "| Header: " . json_encode($header) . " | URL: $url | " .
+                                  " Post data: " . json_encode($post),
     );
-        curl_close($curl);
+        curl_close($curl_obj);
         http_response_code(500);
         header('Content-Type: application/json');
         exit(json_encode($curl_error));
