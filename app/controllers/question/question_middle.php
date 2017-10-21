@@ -15,9 +15,9 @@
  */
 
 // Uncomment to turn debug mode on:
-ini_set('display_startup_errors', 1);
-ini_set('display_errors', 1);
-error_reporting(-1);
+// ini_set('display_startup_errors', 1);
+// ini_set('display_errors', 1);
+// error_reporting(-1);
 
 require '../../services/initial_json_parse.php';
 require '../../services/curl_functions.php';
@@ -32,6 +32,8 @@ $parsed_post_data = initial_json_parse();
 
 $action = $parsed_post_data["action"];
 $table_name = "question";
+
+//print_r($parsed_post_data["fields"]);
 
 /*
  * Set $fields to $parsed_post_data["fields"], or, if 
@@ -147,7 +149,7 @@ function has_question_been_used_in_test($question_primary_key) {
     );
     $header = array();
     $backend_json_response = curl_to_backend($header, 
-                                             "https://web.njit.edu/~ps592/cs_490/app/controllers/request/request_parse_back.php", 
+                                             $backend_endpoint, 
                                              http_build_query($post_data));
     $response = json_decode($backend_json_response, true);
     if (isset($response["items"]) && !empty($response["items"])) {

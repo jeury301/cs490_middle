@@ -60,7 +60,9 @@ function initial_json_parse() {
 			$parsed_post_data['action'] != 'insert' &&
 			$parsed_post_data['action'] != 'edit' &&
 			$parsed_post_data['action'] != 'delete' &&
-			$parsed_post_data['action'] != 'list') {
+			$parsed_post_data['action'] != 'list' &&
+			$parsed_post_data['action'] != 'list_available_for_student' &&
+			$parsed_post_data['action'] != 'list_test_to_be_released') {
 				$error_response = array(
 			            "action" => "unknown",
 			            "status" => "error",

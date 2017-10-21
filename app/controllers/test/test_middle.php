@@ -15,9 +15,9 @@
  */
 
 // Uncomment to turn debug mode on:
-// ini_set('display_startup_errors', 1);
-// ini_set('display_errors', 1);
-// error_reporting(-1);
+ini_set('display_startup_errors', 1);
+ini_set('display_errors', 1);
+error_reporting(-1);
 
 require '../../services/initial_json_parse.php';
 require '../../services/curl_functions.php';
@@ -59,6 +59,10 @@ if ($action == "insert") {
     // TODO: Do table-specific validation for delete
 } else if ($action == "list") {
     // TODO: Do table-specific validation for insert
+} else if ($action == "list_available_for_student") {
+    list_available_for_student($parsed_post_data["primary_key"]);
+} else if ($action == "list_test_to_be_released") {
+    list_test_to_be_released();
 } else {
     // This code should never execute;
     // initial_json_parse should validate that 
@@ -88,3 +92,175 @@ $backend_json_response = curl_to_backend($header,
 http_response_code(200);
 header('Content-Type: application/json');
 exit($backend_json_response);
+
+function list_test_to_be_released() {
+    global $BACKEND_ENDPOINTS;
+
+    // Get a list of tests that have been finalized,
+    // but where scores have not been released
+    $backend_endpoint = $BACKEND_ENDPOINTS["test"];
+    $header = array();
+    $fields = array(
+        "finalized" => 1,
+        "scores_released" => 0,
+    ); 
+    $data = array(
+        "action" => "list",
+        "table_name" => "test",
+        "fields" => $fields,
+    );
+    $post_data = array(
+        "json_string" => json_encode($data),
+    );
+    $backend_json_response = curl_to_backend($header, 
+                                             $backend_endpoint, 
+                                             http_build_query($post_data));
+    $response = json_decode($backend_json_response, true);
+    if (isset($response["items"]) && !empty($response["items"])) {
+        $tests_pending_release = $response["items"];
+    } else {
+        $tests_pending_release = array();
+    }
+
+    // We want to filter out tests that don't have test_scores
+    // associated with them (ie, no students have taken them).
+    // We will get a list test_ids associated with test_scores
+    // 
+    // First, get all test_scores
+    $backend_endpoint = $BACKEND_ENDPOINTS["test_score"];
+    $header = array();
+    $fields = array(); 
+    $data = array(
+        "action" => "list",
+        "table_name" => "test_score",
+        "fields" => $fields,
+    );
+    $post_data = array(
+        "json_string" => json_encode($data),
+    );
+    $backend_json_response = curl_to_backend($header, 
+                                             $backend_endpoint, 
+                                             http_build_query($post_data));
+    $response = json_decode($backend_json_response, true);
+    if (isset($response["items"]) && !empty($response["items"])) {
+        $test_scores = $response["items"];
+    } else {
+        $test_scores = array();
+    }
+
+    // Get the test_ids associated with the test score
+    $test_ids = array();
+    $i = 0;
+    foreach($test_scores as $test_score) {
+        if (!in_array($test_score["test_id"], $test_ids)) {
+            $test_ids[$i] = $test_score["test_id"];
+            $i++;
+        }
+    }
+
+    // Get a list of tests pending release where we have filtered
+    // out tests that don't have an associated test score
+    $tests_pending_release_with_assd_test_scores = array();
+    $i = 0;
+    foreach ($tests_pending_release as $test) {
+        if (in_array($test["primary_key"], $test_ids)) {
+            $tests_pending_release_with_assd_test_scores[$i] = $test;
+            $i++;
+        }
+    }
+    $response = array(
+        "action" => "list_test_to_be_released",
+        "status" => "success",
+        "items" => $tests_pending_release_with_assd_test_scores,
+    );
+    http_response_code(200);
+    header('Content-Type: application/json');
+    exit(json_encode($response));
+}
+
+function list_available_for_student($student_pk){
+    global $BACKEND_ENDPOINTS;
+
+    // Get list of tests already taken by student getting all
+    // test scores that have the student's PK as
+    // their student_id.  Then, extract the value of
+    // test_id from the test_score and add it to an array
+    $backend_endpoint = $BACKEND_ENDPOINTS["test_score"];
+    $header = array();
+    $fields = array(
+        "student_id" => $student_pk,
+    ); 
+    $data = array(
+        "action" => "list",
+        "table_name" => "test_score",
+        "fields" => $fields,
+    );
+    $post_data = array(
+        "json_string" => json_encode($data),
+    );
+    $backend_json_response = curl_to_backend($header, 
+                                             $backend_endpoint, 
+                                             http_build_query($post_data));
+    $response = json_decode($backend_json_response, true);
+    if (isset($response["items"]) && !empty($response["items"])) {
+        $test_scores = $response["items"];
+    } else {
+        $test_scores = array();
+    }
+
+    $tests_taken_by_student = array();
+    $i = 0;
+    foreach ($test_scores as $test_score) {
+        $tests_taken_by_student[$i] = $test_score["test_id"];
+        $i++;
+    }
+    // echo "tests_taken_by_student: ";
+    // print_r($tests_taken_by_student);
+
+    // Get all tests that have been finalized
+    $backend_endpoint = $BACKEND_ENDPOINTS["test"];
+    $header = array();
+    $fields = array(
+        "finalized" => "1",
+    );
+    $data = array(
+        "action" => "list",
+        "table_name" => "test",
+        "fields" => $fields,
+    );
+    $post_data = array(
+        "json_string" => json_encode($data),
+    );
+    $backend_json_response = curl_to_backend($header, 
+                                             $backend_endpoint, 
+                                             http_build_query($post_data));
+    $response = json_decode($backend_json_response, true);
+    if (isset($response["items"]) && !empty($response["items"])) {
+        $all_finalized_tests = $response["items"];
+    } else {
+        $all_finalized_tests = array();
+    }
+    // echo "all_finalized_tests: ";
+    // print_r($all_finalized_tests);
+
+    $tests_the_student_hasnt_taken = array();
+    $i = 0;
+    foreach ($all_finalized_tests as $test) {
+        // If the student hasn't taken the test already
+        if (!in_array($test["primary_key"], $tests_taken_by_student)) {
+            $tests_the_student_hasnt_taken[$i] = $test;
+            $i++;
+        }
+    }
+    // echo "tests_the_student_hasnt_taken";
+    // print_r($tests_the_student_hasnt_taken);
+
+    $response = array(
+        "action" => "list_available_for_student",
+        "status" => "success",
+        "items" => $tests_the_student_hasnt_taken,
+    );
+    http_response_code(200);
+    header('Content-Type: application/json');
+    exit(json_encode($response));
+}
