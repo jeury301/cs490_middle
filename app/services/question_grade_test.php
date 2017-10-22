@@ -37,11 +37,19 @@ echo "<b>ALT QUESTION ANSWER: </b>";
 print_r($alt_question_answer);
 echo "<br/><br/>";
 */
-$alt_question_answer = get_question_answer_for_pk("109");
-echo "<b>ALT QUESTION ANSWER last revised 10-21 at 11:47 AM: </b>"; 
-print_r($alt_question_answer);
+
+/*
+ * In the actual program, we will not be fetching the
+ * quesiton answer from the database - we will be grading
+ * the question answer before it is ever written to the databse
+ */
+
+$alt_question_answer = get_alt_alt_alt_question_answer_db_response("123");
+echo "<b>QUESTION ANSWER last revised 10-22 at 11:26 AM: </b>"; 
+print_r($question_answer);
 echo "<br/><br/>";
 
+// Get question answers and test cases from DB
 $alt_question = get_question_for_question_answer($alt_question_answer);
 echo "<b>ALT QUESTION: </b>";
 print_r($alt_question);
@@ -57,9 +65,9 @@ echo "<br/><br/>";
 
 //grade_question_answer($question_answer, $question, $test_cases);
 
-$results = grade_question_answer($alt_question_answer, $alt_question, $alt_test_cases);
-echo "<b>RESULTS: </b>";
-print_r($results);
+$graded_question_answer = grade_question_answer($alt_question_answer, $alt_question, $alt_test_cases);
+echo "<b>Graded Question Answer: </b>";
+print_r($graded_question_answer);
 echo "<br/><br/>";
 
 /*
@@ -159,6 +167,45 @@ function get_alt_question_answer_db_response() {
     ]
 }';
     return $json;
+}
+function get_alt_alt_question_answer_db_response() {
+    $json = '{
+    "action": "list",
+    "status": "success",
+    "items": [
+        {
+            "primary_key": "307",
+            "question_id": "224",
+            "test_id": "116",
+            "student_id": "6",
+            "answer_text": "def factorial(n):\r\n\tif n < 0:\r\n\t\traise ValueError(\"n must be greater than 0\")\r\n\telif n == 0:\r\n\t\treturn 1\r\n\telse:\r\n\t\treturn n * factorial(n-1)",
+            "grade": "",
+            "notes": ""
+        }
+    ]
+}';
+    $parsed_json = json_decode($json,true);
+    return $parsed_json["items"]["0"];
+}
+
+function get_alt_alt_alt_question_answer_db_response() {
+    $json = '{
+    "action": "list",
+    "status": "success",
+    "items": [
+        {
+            "primary_key": "308",
+            "question_id": "225",
+            "test_id": "116",
+            "student_id": "6",
+            "answer_text": "def concatYolo(input):\r\n\tif input == \"sandwich\":\r\n\t\treturn \"I LOVE SANDWICHES\"\r\n\telse:\r\n\t\treturn input + \"Yolo\"",
+            "grade": "",
+            "notes": ""
+        }
+    ]
+}';
+    $parsed_json = json_decode($json,true);
+    return $parsed_json["items"]["0"];
 }
 
 /*
@@ -283,7 +330,7 @@ function grade_question_answer($question_answer, $question, $test_cases) {
     $results = array(
         "testCaseCount" => 0,
         "passedTestCases" => 0,
-        "testCaseComments" => array(),
+        "comments" => array(),
         "doesFunctionNameMatch" => false,
         "doParametersMatch" => false,
         "questionScore" => 0,
@@ -319,15 +366,27 @@ function grade_question_answer($question_answer, $question, $test_cases) {
 
     /*
      * Check if the answer's parameters match those specified in the question
-     * $correct_params
+     * $correct_params. Also, strip out spaces before comparing
      */
     $answer_params = explode("(", $base_script, 2)[1];
     $answer_params = explode(")", $answer_params, 2)[0];
     $answer_params = str_replace(' ', '', $answer_params);
     $correct_params = str_replace(' ', '', $question["param_names"]);
-
     echo "<br/><b>Value of \$answer_params:</b> $answer_params<br/>";
     echo "<br/><b>Value of \$correct_params:</b> $correct_params<br/>";
+
+    if ($answer_params == $correct_params) {
+        // If correct, update $results["doParametersMatch"]
+        echo "<br/><b>answer_params MATCHES correct_params</b><br/>";
+        $results["doParametersMatch"] = true;
+    } else {
+        // It's not actually necessary to modify the script; it will work
+        // regardless of how the parameters in the function declaration
+        // are named.  But we will dock a point later.
+        echo "<br/><b>answer_params DOES NOT MATCH correct_params</b><br/>";
+        $base_script = str_replace($func_dec, $correct_func_dec, $base_script);
+    }
+
 
 
     $base_script = str_replace($func_dec, $correct_func_dec, $base_script);
@@ -354,25 +413,82 @@ function grade_question_answer($question_answer, $question, $test_cases) {
         echo "<br/><br/> Output: <br/><br/>";
         echo $output;
 
-        if ($test_cases[$i]["output"] == $output) {
+        // We need to check if the expected output specified by
+        // the test_case has quotation marks as its first and
+        // last characters.  Because the actual output that
+        // the script prints will not have quotation marks, we
+        // must remove the quotation marks from the expected
+        // output
+        $expected_output = $test_cases[$i]["output"];
+        // Remove opening quotation mark if necessary
+        if ($expected_output[0]== "\"") {
+            $expected_output = substr($expected_output, 1);
+        }
+        // Remove ending quotation mark if necessary
+        if ($expected_output[strlen($expected_output)-1] == "\"") {
+            $expected_output = substr($expected_output, 0, -1);
+        }
+
+        if ($expected_output == $output) {
             echo "<br/>The output $output matched the expected output " . 
-            $test_cases[$i]["output"] . "<br/><br/>";
+            $expected_output . "<br/><br/>";
             $results["testCaseCount"]++;
             $results["passedTestCases"]++;
-            $results["testCaseComments"][$i] .= "Test case $i PASSED; for input " .
-                $test_cases[$i]["input"] . ", expected " . $test_cases[$i]["output"] . 
+            $results["comments"][$i] .= "Test case $i PASSED; for input " .
+                $test_cases[$i]["input"] . ", expected " . $expected_output . 
                 " and received $output.";
         } else {
             echo "<br/>The output $output did not match the expected output " . 
-            $test_cases[$i]["output"] . "<br/><br/>";
+            $expected_output . "<br/><br/>";
             $results["testCaseCount"]++;
-            $results["testCaseComments"][$i] .= "Test case $i FAILED; for input " .
-                $test_cases[$i]["input"] . ", expected " . $test_cases[$i]["output"] . 
+            $results["comments"][$i] .= "Test case $i FAILED; for input " .
+                $test_cases[$i]["input"] . ", expected " . $expected_output . 
                 " but received $output.";
         }
 
     }
     fclose($handle);
     exec("rm tmp.py");
-    return $results;
+
+    /*
+     * Grading the question answer:
+     * - Questions will be graded on a 10-point scale
+     * - Base grade is (passedTestCases/testCaseCount) * 10
+     *     - Floating-point division by casting testCaseCount as float
+     *     - Result rounded to the nearest integer using round()
+     * - If doesFunctionNameMatch is false, deduct 1 point
+     * - If doParametersMatch is false, deduct 1 point
+     * - Negative scores are not permitted
+     */
+
+    $test_case_ratio_float = $results["passedTestCases"] / 
+        (float) $results["testCaseCount"];
+    $grade = round($test_case_ratio_float * 10);
+    if (!$results["doesFunctionNameMatch"]) {
+        if ($grade - 1 > 0) {
+            $grade -= 1;
+            $results["comments"][count($results["comments"])] = 
+                "Function name does not match specified function name. " . 
+                "One point deducted.";
+        } else {
+            $grade = 0;
+        }
+    }
+    if (!$results["doParametersMatch"]) {
+        if ($grade - 1 > 0) {
+            $grade -= 1;
+            $results["comments"][count($results["comments"])] = 
+                "The names of the function's parameters does not match " . 
+                " specified function name. One point deducted.";
+        } else {
+            $grade = 0;
+        }
+    }
+
+    $results["questionScore"] = $grade;
+
+    $question_answer["grade"] = $results["questionScore"];
+    $question_answer["notes"] = json_encode($results);
+    return $question_answer;
+
 }
