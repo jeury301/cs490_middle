@@ -198,7 +198,7 @@ function get_alt_alt_alt_question_answer_db_response() {
             "question_id": "225",
             "test_id": "116",
             "student_id": "6",
-            "answer_text": "def concatYolo(input):\r\n\tif input == \"sandwich\":\r\n\t\treturn \"I LOVE SANDWICHES\"\r\n\telse:\r\n\t\treturn input + \"Yolo\"",
+            "answer_text": "def concatYoloX(inputz):\r\n\tif inputz == \"sandwich\":\r\n\t\treturn \"I LOVE SANDWICHES\"\r\n\telse:\r\n\t\treturn inputz + \"Yolo\"",
             "grade": "",
             "notes": ""
         }
@@ -334,6 +334,7 @@ function grade_question_answer($question_answer, $question, $test_cases) {
         "doesFunctionNameMatch" => false,
         "doParametersMatch" => false,
         "questionScore" => 0,
+        "professorComments" => "",
     );
 
     // Construct string that will serve as base python script
@@ -384,13 +385,7 @@ function grade_question_answer($question_answer, $question, $test_cases) {
         // regardless of how the parameters in the function declaration
         // are named.  But we will dock a point later.
         echo "<br/><b>answer_params DOES NOT MATCH correct_params</b><br/>";
-        $base_script = str_replace($func_dec, $correct_func_dec, $base_script);
     }
-
-
-
-    $base_script = str_replace($func_dec, $correct_func_dec, $base_script);
-
 
     // Implicitly create and open file where python script will be saved
     $my_file = 'tmp.py';
