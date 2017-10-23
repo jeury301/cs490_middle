@@ -54,7 +54,27 @@ $backend_endpoint = $BACKEND_ENDPOINTS["test"];
 if ($action == "insert") {
     // TODO: Do table-specific validation for insert,
 } else if ($action == "edit") {
-    // TODO: Do table-specific validation for edit
+    // Update related test_scores
+
+    // Make sure the fields data we received includes primary_key 
+    // and fields. If not, the request is malformed and we should 
+    // return an error
+    if (!isset($parsed_post_data["primary_key"]) || 
+        !isset($parsed_post_data["fields"]) ) {
+        $error = array(
+            "action" => "edit",
+            "status" => "error",
+            "user_message" => "Could not edit test.",
+            "internal_message" => "test_middle.php: Malformed " . 
+            "request when trying to insert.  Missing key 'primary_key' " .
+            "or 'fields'",
+        );
+        http_response_code(400);
+        header('Content-Type: application/json');
+        exit(json_encode($error));
+    }
+    update_test_scores($parsed_post_data["primary_key"], 
+        $parsed_post_data["fields"]);
 } else if ($action == "delete") {
     // TODO: Do table-specific validation for delete
 } else if ($action == "list") {
@@ -178,6 +198,82 @@ function list_test_to_be_released() {
     exit(json_encode($response));
 }
 
+/*
+ * Function that updates related test_scores appropriately
+ * when test is updated
+ */
+function update_test_scores($primary_key, $fields_received) {
+    global $BACKEND_ENDPOINTS;
+
+    // Returns true if successfuly, false if not successful
+    // echo "In update_test_scores...";
+    $return_val = true;
+
+    // Get all test_scores related to the test
+    $backend_endpoint = $BACKEND_ENDPOINTS["test_score"];
+    $header = array();
+    $fields = array(
+        "test_id" => $primary_key,
+    ); 
+    $data = array(
+        "action" => "list",
+        "table_name" => "test_score",
+        "fields" => $fields,
+    );
+    $post_data = array(
+        "json_string" => json_encode($data),
+    );
+    $backend_json_response = curl_to_backend($header, 
+                                             $backend_endpoint, 
+                                             http_build_query($post_data));
+    $response = json_decode($backend_json_response, true);
+    if (isset($response["items"]) && !empty($response["items"])) {
+        $test_scores = $response["items"];
+    } else {
+        $test_scores = array();
+    }
+
+    // Update each of the test_scores
+    $fields_to_update = array();
+    if (isset($fields_received["test_name"])) {
+        $fields_to_update["test_name"] = $fields_received["test_name"];
+    }
+    if (isset($fields_received["scores_released"])) {
+        $fields_to_update["scores_released"] = $fields_received["scores_released"];
+    }
+    foreach ($test_scores as $test_score) {
+        $backend_endpoint = $BACKEND_ENDPOINTS["test_score"];
+        $header = array();
+        $fields = $fields_to_update;
+        $data = array(
+            "action" => "edit",
+            "table_name" => "test_score",
+            "primary_key" => $test_score["primary_key"],
+            "fields" => $fields,
+        );
+        $post_data = array(
+            "json_string" => json_encode($data),
+        );
+        $backend_json_response = curl_to_backend($header, 
+                                                 $backend_endpoint, 
+                                                 http_build_query($post_data));
+        $response = json_decode($backend_json_response, true);
+        // echo "Response after trying to update test score with pk " . 
+        //     $test_score["primary_key"] . "<br/>";
+        // print_r($response);
+        // echo "<br/><br/>";
+        if ($response["status"] != "success") {
+            $return_val = false;
+        }
+        // TODO: Check if status is success; if not, handle appropriately.
+    }
+    return $return_val;
+}
+
+/*
+ * Helper function for front end that lists the test
+ * that a logged-in student is eligible to take
+ */
 function list_available_for_student($student_pk){
     global $BACKEND_ENDPOINTS;
 
