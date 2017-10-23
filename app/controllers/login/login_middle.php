@@ -1,9 +1,4 @@
 <?php
-/*
-ini_set('display_startup_errors', 1);
-ini_set('display_errors', 1);
-error_reporting(-1);
-*/
 
 /**
  * login_middle.php
@@ -15,10 +10,15 @@ error_reporting(-1);
  * request: 1.) POST to back end DB server with username specifying
  * either the Student or Professor table.  Request to backend server 
  * returns user record, including hashed password and salt, which is 
- * verified against plaintext password. Script returns JSON object 
- * to front end indicating whether  authentication was successful 
- * with user record in project's database.
+ * verified against plaintext password. If password is verified,
+ * script returns JSON representation of the user record to the 
+ * front end.
  */
+
+// Uncomment to turn on debug mode
+// ini_set('display_startup_errors', 1);
+// ini_set('display_errors', 1);
+// error_reporting(-1);
 
 require '../../services/initial_json_parse.php';
 require '../../services/curl_functions.php';

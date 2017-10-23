@@ -5,14 +5,26 @@
  * Created by Michael Anderson on October 4, 2017
  *
  * Parses the request received from the front-end and
- * performs table-specifc validation on it.
+ * performs general, table-agnostic validation on the
+ * data received from the front end.
+ *
  * If validation fails, the script will return a 
  * formatted JSON error response directly to
  * the front end.  If validation is successful, the 
  * front-end request will be reformatted and passed
  * to the back end, and the back-end response will
  * in turn be returned to the front as JSON.
- */
+ *
+ * This controller also performs the following validation/ 
+ * actions SPECIFIC TO THE TEST_SCORE TABLE:
+ *
+ * - When action is 'insert':
+ *   - Confirm all required fields have been passed in
+ *     json_string
+ *   - Fetch all related question_answer records and 
+ *     calculate a total test score
+ *   - Update grade field before writing to database
+ */     
 
 // Uncomment to turn debug mode on:
 // ini_set('display_startup_errors', 1);

@@ -1,4 +1,7 @@
 <?php
+
+// THIS FILE IS JUST A SANDBOX.  NOT TO BE USED IN PRODUCTION
+
 require 'curl_functions.php';
 $BACKEND_ENDPOINTS = include '../backend_endpoints.php';
 

@@ -15,7 +15,7 @@ return array(
 );
 
 /*
- * Uncomment to use debug server
+ * Uncomment to use debug server 1
  */
 /*
 return array(
