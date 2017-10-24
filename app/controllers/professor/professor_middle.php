@@ -1,15 +1,13 @@
 <?php
+
 /**
  * professor_middle.php
  *
  * Created by Michael Anderson on October 4, 2017
  *
  * Parses the request received from the front-end and
- * performs table-specifc validation on it:
- *
- * - CONDITION 1
- * - CONDITION 2
- * - etc.
+ * performs general, table-agnostic validation on the
+ * data received from the front end.
  *
  * If validation fails, the script will return a 
  * formatted JSON error response directly to
@@ -17,6 +15,12 @@
  * front-end request will be reformatted and passed
  * to the back end, and the back-end response will
  * in turn be returned to the front as JSON.
+ *
+ * This controller also performs the following validation/ 
+ * actions SPECIFIC TO THE PROFESSOR TABLE:
+ *
+ * - (None implemented at this time)
+ *
  */
 
 // Uncomment to turn debug mode on:

@@ -9,8 +9,8 @@
  * validation general to all tables.
  *
  * If parse and validate is successful, return a PHP
- * array of the parsed JSON. Else, return a PHP array
- * corresponding to the error format.
+ * array of the parsed JSON. Else, print a JSON error 
+ * message and exit.
  */
 
 function initial_json_parse() {

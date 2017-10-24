@@ -1,5 +1,7 @@
 <?php
 
+// THIS FILE IS JUST A SANDBOX.  NOT TO BE USED IN PRODUCTION
+
 $innerArray = array(
 	"innerKey1" => "innerValue1",
 	"innerKey2" => "innerValue2",

@@ -5,14 +5,32 @@
  * Created by Michael Anderson on October 4, 2017
  *
  * Parses the request received from the front-end and
- * performs table-specifc validation on it.
+ * performs general, table-agnostic validation on the
+ * data received from the front end.
+ *
  * If validation fails, the script will return a 
  * formatted JSON error response directly to
  * the front end.  If validation is successful, the 
  * front-end request will be reformatted and passed
  * to the back end, and the back-end response will
  * in turn be returned to the front as JSON.
- */
+ *
+ * This controller also performs the following validation/ 
+ * actions SPECIFIC TO THE QUESTION_ANSWER TABLE:
+ *
+ * - When action is 'insert': 
+ *    - Confirm the required fields are found in json_string
+ *    - Auto-grade the quesiton_answer before submitting to
+ *      the database:
+ *      - Fetch related question from database
+ *      - Fetch related test_cases from database
+ *      - For each test case, compose, save, and execute a
+ *        Python script based on question_answer's answer_
+ *        text field and test_case's parameters
+ *      - Compare output of Python script to test_case target
+ *        output
+ *      - Update question_answer's grade and note fields 
+ */     
 
 // Uncomment to turn debug mode on:
 // ini_set('display_startup_errors', 1);

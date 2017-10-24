@@ -5,13 +5,33 @@
  * Created by Michael Anderson on October 4, 2017
  *
  * Parses the request received from the front-end and
- * performs table-specifc validation on it.
+ * performs general, table-agnostic validation on the
+ * data received from the front end.
+ *
  * If validation fails, the script will return a 
  * formatted JSON error response directly to
  * the front end.  If validation is successful, the 
  * front-end request will be reformatted and passed
  * to the back end, and the back-end response will
  * in turn be returned to the front as JSON.
+ *
+ * This controller also performs the following validation/ 
+ * actions SPECIFIC TO THE TEST TABLE:
+ *
+ * - When action is 'edit':
+ *   - Confirm required parameters in json_string
+ *   - Update all related test_score records before
+ *    updating test record
+ *
+ * - When action is 'list_available_for_student'
+ *   - Given a student's primary_key, return a JSON
+ *     representation of all tests that student is
+ *     elligible to take
+ *
+ * - When action is 'list_test_to_be_released'
+ *   - Return a JSON representation of all tests that
+ *     have been finalized, have at least one associated
+ *     test score, and have scores_released set to false
  */
 
 // Uncomment to turn debug mode on:
