@@ -19,6 +19,12 @@
  * This controller also performs the following validation/ 
  * actions SPECIFIC TO THE QUESTION TABLE:
  *
+ * - When action is 'insert':
+ *    - Validate that either 'Easy', 'Medium', or 'Hard' has
+ *      been passed as the value for the 'difficulty' key
+ *      within 'fields'
+ *    - Set the default_point_value to 5, 10, or 15 based on
+ *      based on the difficulty (Easy:5, Medium:10, Hard:15)
  * - When action is 'delete': 
  *    - Confirm a primary key has been passed in json_string
  *    - Determine if a question has already been used in a test;
@@ -67,7 +73,38 @@ if (isset($parsed_post_data["fields"])) {
 $backend_endpoint = $BACKEND_ENDPOINTS["question"];
 
 if ($action == "insert") {
-    // TODO: Do table-specific validation for insert,
+    // Make sure difficulty is "Easy", "Medium", or "Hard"
+    // and set the default_point_value as 5, 10, or 15
+    // respectively
+    if (!isset($parsed_post_data["fields"]["difficulty"])) {
+        $error_msg = array(
+            "action" => "insert",
+            "status" => "error",
+            "user_message" => "Error attempting to insert a question.",
+            "internal_message" => "question_middle.php: Missing 'difficulty' key" . 
+                                  " within 'fields' in post data."
+        );
+        http_response_code(400); // Bad request
+        header('Content-Type: application/json');
+        exit(json_encode($error_msg));
+    } else if (strcasecmp($parsed_post_data["fields"]["difficulty"], "Easy") == 0) {
+        $parsed_post_data["fields"]["default_point_value"] = 5;
+    } else if (strcasecmp($parsed_post_data["fields"]["difficulty"], "Medium") == 0) {
+        $parsed_post_data["fields"]["default_point_value"] = 5;
+    } else if (strcasecmp($parsed_post_data["fields"]["difficulty"], "Hard") == 0) {
+        $parsed_post_data["fields"]["default_point_value"] = 5;
+    } else {
+        $error_msg = array(
+            "action" => "insert",
+            "status" => "error",
+            "user_message" => "Error attempting to insert a question.",
+            "internal_message" => "question_middle.php: Invalid value for" . 
+                                  " difficulty within 'fields' in post data."
+        );
+        http_response_code(400); // Bad request
+        header('Content-Type: application/json');
+        exit(json_encode($error_msg));
+    }
 
 } else if ($action == "edit") {
     // TODO: Do table-specific validation for edit

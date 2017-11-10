@@ -148,6 +148,39 @@ exit($backend_json_response);
  * Methods for getting DB records necessary to grade a question_answer
  */
 
+/* Get the point value associated with a given test question */
+function get_test_question_point_value($question_answer) {
+    global $BACKEND_ENDPOINTS;
+    $backend_endpoint = $BACKEND_ENDPOINTS["test_question"];
+    $header = array();
+    $fields = array(
+        "question_id" => $question_answer["question_id"],
+        "test_id" => $question_answer["test_id"]
+    );
+    // echo "Value of question_pk: $question_pk...";
+    $data = array(
+        "action" => "list",
+        "table_name" => "test_question",
+        "fields" => $fields,
+    );
+    $post_data = array(
+        "json_string" => json_encode($data),
+    );
+    $backend_json_response = curl_to_backend($header, 
+                                             $backend_endpoint, 
+                                             http_build_query($post_data));
+    $response = json_decode($backend_json_response, true);
+    if (isset($response["items"][0]["point_value"]) && 
+        !empty($response["items"][0]["point_value"])) {
+        return $response["items"][0]["point_value"];
+    } else {
+        // echo "In else clause...";
+        // echo "Value of backend_json_response: $backend_json_response...";
+        return false;
+    }
+
+}
+
 function get_question_for_question_answer($question_answer){
     // echo "in get_question_for_question_answer()...";
     global $BACKEND_ENDPOINTS;
@@ -312,8 +345,22 @@ function grade_question_answer($question_answer, $question, $test_cases) {
     $my_file = "$hashstring.py";
     $handle = fopen($my_file, 'w') or die('Cannot open file:  '.$my_file);
 
+    
+    /* Get the point value of the given question 
+     * - First, see if there is a specific point_value associated
+     *   with the test_question record; if not, check what the
+     *   default point value of the question is; if both of those
+     *   fail, use a point value of 10
+     */
+    $test_score_point_value = $get_test_question_point_value($question_answer);
+    if ($test_score_point_value) {
+        $question_point_value = $test_score_point_value;
+    } else if (isset($question["point_value"])) {
+        $question_point_value = $question["point_value"];
+    } else {
+        $question_point_value = 10;
+    }
     // Determine how many points each test case is worth, rounded to 0.1
-    $question_point_value = $question["point_value"];
     $points_per_test_case = $question_point_value / (float) count($test_cases);
     $points_per_test_case = round($points_per_test_case, 1);
 
@@ -412,6 +459,7 @@ function grade_question_answer($question_answer, $question, $test_cases) {
 
     $results["questionScore"] = $grade;
 
+    $question_answer["point_value"] = $question_point_value;
     $question_answer["grade"] = $results["questionScore"];
     $question_answer["notes"] = json_encode($results);
     return $question_answer;
