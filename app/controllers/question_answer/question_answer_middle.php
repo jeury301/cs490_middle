@@ -352,7 +352,7 @@ function grade_question_answer($question_answer, $question, $test_cases) {
      *   default point value of the question is; if both of those
      *   fail, use a point value of 10
      */
-    $test_score_point_value = $get_test_question_point_value($question_answer);
+    $test_score_point_value = get_test_question_point_value($question_answer);
     if ($test_score_point_value) {
         $question_point_value = $test_score_point_value;
     } else if (isset($question["point_value"])) {
@@ -376,7 +376,7 @@ function grade_question_answer($question_answer, $question, $test_cases) {
         fwrite($handle, $data);
         // echo "<br/>";
 
-        $cmd = "python $my_file";
+        $cmd = "timeout 1s python $my_file 2>&1";
         $output = exec($cmd);
         // echo "<br/><br/> Output: <br/><br/>";
         // echo $output;
@@ -402,16 +402,16 @@ function grade_question_answer($question_answer, $question, $test_cases) {
             $expected_output . "<br/><br/>";
             $results["testCaseCount"]++;
             $results["passedTestCases"]++;
-            $results["comments"][$i] .= "Test case $i PASSED; for input " .
-                $test_cases[$i]["input"] . ", expected " . $expected_output . 
-                " and received $output.";
+            $results["comments"][$i] .= "Test case $i PASSED; for input '" .
+                $test_cases[$i]["input"] . "', expected '" . $expected_output . 
+                "' and received '$output'.";
         } else {
             // echo "<br/>The output $output did not match the expected output " . 
             $expected_output . "<br/><br/>";
             $results["testCaseCount"]++;
-            $results["comments"][$i] .= "Test case $i FAILED; for input " .
-                $test_cases[$i]["input"] . ", expected " . $expected_output . 
-                " but received $output. $points_per_test_case points" .
+            $results["comments"][$i] .= "Test case $i FAILED; for input '" .
+                $test_cases[$i]["input"] . "', expected '" . $expected_output . 
+                "' but received '$output'. $points_per_test_case points" .
                 " deducted out of a possible total of $question_point_value.";
         }
 
@@ -462,5 +462,6 @@ function grade_question_answer($question_answer, $question, $test_cases) {
     $question_answer["point_value"] = $question_point_value;
     $question_answer["grade"] = $results["questionScore"];
     $question_answer["notes"] = json_encode($results);
+    $question_answer["professor_notes"] = "";
     return $question_answer;
 }
