@@ -406,7 +406,7 @@ function grade_question_answer($question_answer, $question, $test_cases) {
         fwrite($handle, $data);
         echo "<br/>";
 
-        $cmd = "python3 $my_file";
+        $cmd = "python $my_file";
         $output = exec($cmd);
         echo "<br/><br/> Output: <br/><br/>";
         echo $output;
