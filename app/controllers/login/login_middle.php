@@ -43,13 +43,12 @@ if ($parsed_post_data['status'] == 'error') {
  * $parsed_post_data, return JSON with error message and exit the script
  */
 if (!isset($parsed_post_data['username']) || 
-    !isset($parsed_post_data['role']) ||
     !isset($parsed_post_data['plaintext_password']) )  {
     $error_response = array(
             "action" => "login",
             "status" => "error",
             "user_message" => "An error has occured.",
-            "internal_message" => 'login_middle.php: Error: key `username`, `role` or ' .
+            "internal_message" => 'login_middle.php: Error: key `username` or ' .
                                   '`plaintext_password` missing from JSON POST data ' .
                                   'received from front end'
     );
@@ -59,27 +58,34 @@ if (!isset($parsed_post_data['username']) ||
 }
 
 // Based on the role, set the backend endpoint to CURL to
-
 // Case-insensitive string comparison
-if (strcasecmp($parsed_post_data['role'], 'student') == 0) {
-    $backend_endpoint = $BACKEND_ENDPOINTS["loginStudent"];
-    $role = "student";
-} else if (strcasecmp($parsed_post_data['role'], 'professor') == 0) {
-    $backend_endpoint = $BACKEND_ENDPOINTS["loginProfessor"];
-    $role = "professor";
-} else {
-    // If invalid value for 'role', return an error
-    $error_response = array(
-            "action" => "login",
-            "status" => "error",
-            "user_message" => "An error has occured.",
-            "internal_message" => 'login_middle.php: Error: invalid value for key '. 
-                                  '`role`. Expecting `professor` or `student`.'
-    );
-    http_response_code(400);
-    header('Content-Type: application/json');
-    exit(json_encode($error_response));
-}
+// if (strcasecmp($parsed_post_data['role'], 'student') == 0) {
+//     $backend_endpoint = $BACKEND_ENDPOINTS["loginStudent"];
+//     $role = "student";
+// } else if (strcasecmp($parsed_post_data['role'], 'professor') == 0) {
+//     $backend_endpoint = $BACKEND_ENDPOINTS["loginProfessor"];
+//     $role = "professor";
+// } else {
+//     // If invalid value for 'role', return an error
+//     $error_response = array(
+//             "action" => "login",
+//             "status" => "error",
+//             "user_message" => "An error has occured.",
+//             "internal_message" => 'login_middle.php: Error: invalid value for key '. 
+//                                   '`role`. Expecting `professor` or `student`.'
+//     );
+//     http_response_code(400);
+//     header('Content-Type: application/json');
+//     exit(json_encode($error_response));
+// }
+
+/* 
+ * We will first try to log in to the student table; if successful,
+ * we will return and exit with role "student".  If not, we will 
+ * try to log in to the professor table; if successful, we will
+ * return and exit with role "professor".  If both fail, we 
+ * will return the appropriate error JSON
+ */
 
 /*
  * Here, we are sending a POST request to the backend server
@@ -92,13 +98,17 @@ $post_params = array(
     "user_name" => $parsed_post_data['username']
 );
 $header = array(); // Function takes a header arg, but not necessary here
+
+// First, try student table:
+$role = "student";
+$backend_endpoint = $BACKEND_ENDPOINTS["loginStudent"];
 $backend_json_response = curl_to_backend($header, $backend_endpoint, http_build_query($post_params));
 $parsed_backend_response = json_decode($backend_json_response, true);
 //print_r($parsed_backend_response);
 
 /*
- * Check whether password matches hash/salt retrieved from DB.
- * If so, update $response array 
+ * Check whether password matches hash/salt retrieved from student
+ * table. If so, update $response array 
  */
 if (password_verify($parsed_post_data['plaintext_password'], 
     $parsed_backend_response['items'][0]['hash_salt'])) {
@@ -109,13 +119,33 @@ if (password_verify($parsed_post_data['plaintext_password'],
         "items" => $parsed_backend_response['items']
     );
 } else {
-    $response = array(
-        "action" => "login",
-        "status" => "error",
-        "role" => $role,
-        "user_message" => "Login failed.  Unknown username/password combination.",
-        "internal_message" => "login_middle.php: User password did not match hash."
+    // Second, try the professor table
+    $role = "professor";
+    $backend_endpoint = $BACKEND_ENDPOINTS["loginProfessor"];
+    $backend_json_response = curl_to_backend($header, $backend_endpoint, http_build_query($post_params));
+    $parsed_backend_response = json_decode($backend_json_response, true);
+
+    /*
+     * Check whether password matches hash/salt retrieved from professor
+     * table. If so, update $response array 
+     */
+    if (password_verify($parsed_post_data['plaintext_password'], 
+        $parsed_backend_response['items'][0]['hash_salt'])) {
+        $response = array(
+            "action" => "login",
+            "status" => "successful",
+            "role" => $role,
+            "items" => $parsed_backend_response['items']
+        );
+    } else {
+        $response = array(
+            "action" => "login",
+            "status" => "error",
+            "role" => "",
+            "user_message" => "Login failed.  Unknown username/password combination.",
+            "internal_message" => "login_middle.php: User password did not match hash."
     );
+    }
 }
 
 // Return CURL response to the front end

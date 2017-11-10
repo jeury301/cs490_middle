@@ -312,6 +312,11 @@ function grade_question_answer($question_answer, $question, $test_cases) {
     $my_file = "$hashstring.py";
     $handle = fopen($my_file, 'w') or die('Cannot open file:  '.$my_file);
 
+    // Determine how many points each test case is worth, rounded to 0.1
+    $question_point_value = $question["point_value"];
+    $points_per_test_case = $question_point_value / (float) count($test_cases);
+    $points_per_test_case = round($points_per_test_case, 1);
+
     // For each test case, insert the appropriate parameters into the script
     for ($i=0; $i<count($test_cases); $i++) {
         $complete_script = insert_params($base_script, $test_cases[$i]["input"]);
@@ -359,7 +364,8 @@ function grade_question_answer($question_answer, $question, $test_cases) {
             $results["testCaseCount"]++;
             $results["comments"][$i] .= "Test case $i FAILED; for input " .
                 $test_cases[$i]["input"] . ", expected " . $expected_output . 
-                " but received $output.";
+                " but received $output. $points_per_test_case points" .
+                " deducted out of a possible total of $question_point_value.";
         }
 
     }
@@ -368,18 +374,18 @@ function grade_question_answer($question_answer, $question, $test_cases) {
 
     /*
      * Grading the question answer:
-     * - Questions will be graded on a 10-point scale
-     * - Base grade is (passedTestCases/testCaseCount) * 10
+     * - Questions will be graded on a variable-point scale
+     * - Base grade is (passedTestCases/testCaseCount) * question_point_value
      *     - Floating-point division by casting testCaseCount as float
      *     - Result rounded to the nearest integer using round()
      * - If doesFunctionNameMatch is false, deduct 1 point
      * - If doParametersMatch is false, deduct 1 point
      * - Negative scores are not permitted
      */
-
+    
     $test_case_ratio_float = $results["passedTestCases"] / 
         (float) $results["testCaseCount"];
-    $grade = round($test_case_ratio_float * 10);
+    $grade = round($test_case_ratio_float * $question_point_value);
     if (!$results["doesFunctionNameMatch"]) {
         if ($grade - 1 > 0) {
             $grade -= 1;
@@ -400,6 +406,9 @@ function grade_question_answer($question_answer, $question, $test_cases) {
             $grade = 0;
         }
     }
+    $results["comments"][count($results["comments"])] = 
+    "A total of $grade out of $question_point_value points " . 
+    "were earned on this question.";
 
     $results["questionScore"] = $grade;
 

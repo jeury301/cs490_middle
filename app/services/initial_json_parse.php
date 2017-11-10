@@ -80,4 +80,18 @@ function initial_json_parse() {
 			return $parsed_post_data;
 		}
 	}
+
+	// If the action is 'edit', make sure a primary key was passed
+	if ($parsed_post_data['action'] == 'edit') {
+		if (!isset($parsed_post_data['primary_key'])) {
+			$error_response = array(
+		            "action" => "edit",
+		            "status" => "error",
+		            "user_message" => "An error has occured.",
+		            "internal_message" => 'initial_json_parse.php: Variable ' . 
+		            '"primary_key" missing from parsed JSON data',
+		    );
+		    exit(json_encode($error_response));
+		}
+	}
 }
