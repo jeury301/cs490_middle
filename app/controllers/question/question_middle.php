@@ -90,9 +90,9 @@ if ($action == "insert") {
     } else if (strcasecmp($parsed_post_data["fields"]["difficulty"], "Easy") == 0) {
         $parsed_post_data["fields"]["default_point_value"] = 5;
     } else if (strcasecmp($parsed_post_data["fields"]["difficulty"], "Medium") == 0) {
-        $parsed_post_data["fields"]["default_point_value"] = 5;
+        $parsed_post_data["fields"]["default_point_value"] = 10;
     } else if (strcasecmp($parsed_post_data["fields"]["difficulty"], "Hard") == 0) {
-        $parsed_post_data["fields"]["default_point_value"] = 5;
+        $parsed_post_data["fields"]["default_point_value"] = 15;
     } else {
         $error_msg = array(
             "action" => "insert",

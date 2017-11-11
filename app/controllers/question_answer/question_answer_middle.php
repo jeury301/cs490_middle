@@ -314,9 +314,9 @@ function grade_question_answer($question_answer, $question, $test_cases) {
 
         // And instances of the function name throughout the script,
         // in case of recursion
-        $func_name = substr($func_dec, 4);
+        $func_name = substr($func_dec, 4);  // Strip "def ", thus start at 4
         $correct_func_name = substr($correct_func_dec, 4);
-        $base_script = str_replace($func_name, $correct_func_name, $base_script);
+        $base_script = str_replace($func_name . '(', $correct_func_name . '(', $base_script);
     }
 
     /*
@@ -376,7 +376,7 @@ function grade_question_answer($question_answer, $question, $test_cases) {
         fwrite($handle, $data);
         // echo "<br/>";
 
-        $cmd = "timeout 1s python $my_file 2>&1";
+        $cmd = "timeout 1 python $my_file 2>&1";
         $output = exec($cmd);
         // echo "<br/><br/> Output: <br/><br/>";
         // echo $output;
@@ -396,6 +396,9 @@ function grade_question_answer($question_answer, $question, $test_cases) {
         if ($expected_output[strlen($expected_output)-1] == "\"") {
             $expected_output = substr($expected_output, 0, -1);
         }
+
+        // TODO:
+        // If the expected output is an array, get rid of whitespace
 
         if ($expected_output == $output) {
             // echo "<br/>The output $output matched the expected output " . 
