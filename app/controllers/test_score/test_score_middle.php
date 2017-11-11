@@ -107,17 +107,21 @@ if ($action == "insert") {
 
 
 } else if ($action == "edit") {
+    // echo 'In "else if ($action == "edit")"...';
     // We must recalculate test_score's grade, raw_points
     // and max_points fields when a related question_answer
     // has been updated
 
     // Get an array representation of the existing test_score
     $primary_key = $parsed_post_data["primary_key"];
+    // echo "Value of primary key is $primary_key.";
     $test_score = get_test_score($primary_key);
     //print_r($test_score);
 
     // Get the related question answers for the student and the exam
     $question_answers = get_question_answers($test_score);
+    // echo 'Value of $question_answers';
+    // print_r($question_answers);
     // echo "Question answers: ";
     // print_r($question_answers);
 
@@ -166,8 +170,9 @@ exit($backend_json_response);
  * Method for getting an existing test_score
  * by its primary key
  */
-function get_test_score($pimary_key) {
+function get_test_score($primary_key) {
     global $BACKEND_ENDPOINTS;
+    // echo "In get_test_score...<br/>";
     $post_data["table_name"] = "test_score";
     $post_data["action"] = "list";
     $post_data["fields"] = array("primary_key" => $primary_key);
@@ -179,6 +184,8 @@ function get_test_score($pimary_key) {
                                              $backend_endpoint, 
                                              http_build_query($new_post_params));
     $response = json_decode($backend_json_response, true);
+    // echo "Response from get_test_score:<br/>";
+    // print_r($response);
     // We expect one item in the items array within the parsed response
     // If it is there, return it.
     if (isset($response["items"][0]) && !empty($response["items"])) {
@@ -195,6 +202,9 @@ function get_test_score($pimary_key) {
  */
 function get_question_answers($test_score) {
     global $BACKEND_ENDPOINTS;
+    // echo "<br/>Value of test_score<br/>";
+    // print_r($test_score);
+    // echo "<br/>END of test_score<br/>";
     $student_id = $test_score["student_id"];
     // echo "value of student_id: $student_id";
     $test_id = $test_score["test_id"];
