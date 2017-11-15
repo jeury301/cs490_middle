@@ -148,6 +148,39 @@ exit($backend_json_response);
  * Methods for getting DB records necessary to grade a question_answer
  */
 
+/* Get the point value associated with a given test question */
+function get_test_question_point_value($question_answer) {
+    global $BACKEND_ENDPOINTS;
+    $backend_endpoint = $BACKEND_ENDPOINTS["test_question"];
+    $header = array();
+    $fields = array(
+        "question_id" => $question_answer["question_id"],
+        "test_id" => $question_answer["test_id"]
+    );
+    // echo "Value of question_pk: $question_pk...";
+    $data = array(
+        "action" => "list",
+        "table_name" => "test_question",
+        "fields" => $fields,
+    );
+    $post_data = array(
+        "json_string" => json_encode($data),
+    );
+    $backend_json_response = curl_to_backend($header, 
+                                             $backend_endpoint, 
+                                             http_build_query($post_data));
+    $response = json_decode($backend_json_response, true);
+    if (isset($response["items"][0]["point_value"]) && 
+        !empty($response["items"][0]["point_value"])) {
+        return $response["items"][0]["point_value"];
+    } else {
+        // echo "In else clause...";
+        // echo "Value of backend_json_response: $backend_json_response...";
+        return false;
+    }
+
+}
+
 function get_question_for_question_answer($question_answer){
     // echo "in get_question_for_question_answer()...";
     global $BACKEND_ENDPOINTS;
@@ -281,9 +314,9 @@ function grade_question_answer($question_answer, $question, $test_cases) {
 
         // And instances of the function name throughout the script,
         // in case of recursion
-        $func_name = substr($func_dec, 4);
+        $func_name = substr($func_dec, 4);  // Strip "def ", thus start at 4
         $correct_func_name = substr($correct_func_dec, 4);
-        $base_script = str_replace($func_name, $correct_func_name, $base_script);
+        $base_script = str_replace($func_name . '(', $correct_func_name . '(', $base_script);
     }
 
     /*
@@ -312,6 +345,25 @@ function grade_question_answer($question_answer, $question, $test_cases) {
     $my_file = "$hashstring.py";
     $handle = fopen($my_file, 'w') or die('Cannot open file:  '.$my_file);
 
+    
+    /* Get the point value of the given question 
+     * - First, see if there is a specific point_value associated
+     *   with the test_question record; if not, check what the
+     *   default point value of the question is; if both of those
+     *   fail, use a point value of 10
+     */
+    $test_score_point_value = get_test_question_point_value($question_answer);
+    if ($test_score_point_value) {
+        $question_point_value = $test_score_point_value;
+    } else if (isset($question["point_value"])) {
+        $question_point_value = $question["point_value"];
+    } else {
+        $question_point_value = 10;
+    }
+    // Determine how many points each test case is worth, rounded to 0.1
+    $points_per_test_case = $question_point_value / (float) count($test_cases);
+    $points_per_test_case = round($points_per_test_case, 1);
+
     // For each test case, insert the appropriate parameters into the script
     for ($i=0; $i<count($test_cases); $i++) {
         $complete_script = insert_params($base_script, $test_cases[$i]["input"]);
@@ -324,7 +376,7 @@ function grade_question_answer($question_answer, $question, $test_cases) {
         fwrite($handle, $data);
         // echo "<br/>";
 
-        $cmd = "python3 $my_file";
+        $cmd = "timeout 1 python $my_file 2>&1";
         $output = exec($cmd);
         // echo "<br/><br/> Output: <br/><br/>";
         // echo $output;
@@ -345,21 +397,25 @@ function grade_question_answer($question_answer, $question, $test_cases) {
             $expected_output = substr($expected_output, 0, -1);
         }
 
+        // TODO:
+        // If the expected output is an array, get rid of whitespace
+
         if ($expected_output == $output) {
             // echo "<br/>The output $output matched the expected output " . 
             $expected_output . "<br/><br/>";
             $results["testCaseCount"]++;
             $results["passedTestCases"]++;
-            $results["comments"][$i] .= "Test case $i PASSED; for input " .
-                $test_cases[$i]["input"] . ", expected " . $expected_output . 
-                " and received $output.";
+            $results["comments"][$i] .= "Test case $i PASSED; for input '" .
+                $test_cases[$i]["input"] . "', expected '" . $expected_output . 
+                "' and received '$output'.";
         } else {
             // echo "<br/>The output $output did not match the expected output " . 
             $expected_output . "<br/><br/>";
             $results["testCaseCount"]++;
-            $results["comments"][$i] .= "Test case $i FAILED; for input " .
-                $test_cases[$i]["input"] . ", expected " . $expected_output . 
-                " but received $output.";
+            $results["comments"][$i] .= "Test case $i FAILED; for input '" .
+                $test_cases[$i]["input"] . "', expected '" . $expected_output . 
+                "' but received '$output'. $points_per_test_case points" .
+                " deducted out of a possible total of $question_point_value.";
         }
 
     }
@@ -368,18 +424,18 @@ function grade_question_answer($question_answer, $question, $test_cases) {
 
     /*
      * Grading the question answer:
-     * - Questions will be graded on a 10-point scale
-     * - Base grade is (passedTestCases/testCaseCount) * 10
+     * - Questions will be graded on a variable-point scale
+     * - Base grade is (passedTestCases/testCaseCount) * question_point_value
      *     - Floating-point division by casting testCaseCount as float
      *     - Result rounded to the nearest integer using round()
      * - If doesFunctionNameMatch is false, deduct 1 point
      * - If doParametersMatch is false, deduct 1 point
      * - Negative scores are not permitted
      */
-
+    
     $test_case_ratio_float = $results["passedTestCases"] / 
         (float) $results["testCaseCount"];
-    $grade = round($test_case_ratio_float * 10);
+    $grade = round($test_case_ratio_float * $question_point_value);
     if (!$results["doesFunctionNameMatch"]) {
         if ($grade - 1 > 0) {
             $grade -= 1;
@@ -400,10 +456,15 @@ function grade_question_answer($question_answer, $question, $test_cases) {
             $grade = 0;
         }
     }
+    $results["comments"][count($results["comments"])] = 
+    "A total of $grade out of $question_point_value points " . 
+    "were earned on this question.";
 
     $results["questionScore"] = $grade;
 
+    $question_answer["point_value"] = $question_point_value;
     $question_answer["grade"] = $results["questionScore"];
     $question_answer["notes"] = json_encode($results);
+    $question_answer["professor_notes"] = "";
     return $question_answer;
 }

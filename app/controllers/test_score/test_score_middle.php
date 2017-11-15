@@ -107,7 +107,31 @@ if ($action == "insert") {
 
 
 } else if ($action == "edit") {
-    // TODO: Do table-specific validation for edit
+    // echo 'In "else if ($action == "edit")"...';
+    // We must recalculate test_score's grade, raw_points
+    // and max_points fields when a related question_answer
+    // has been updated
+
+    // Get an array representation of the existing test_score
+    $primary_key = $parsed_post_data["primary_key"];
+    // echo "Value of primary key is $primary_key.";
+    $test_score = get_test_score($primary_key);
+    //print_r($test_score);
+
+    // Get the related question answers for the student and the exam
+    $question_answers = get_question_answers($test_score);
+    // echo 'Value of $question_answers';
+    // print_r($question_answers);
+    // echo "Question answers: ";
+    // print_r($question_answers);
+
+    // Grade based on the question answers and update test_score
+    $test_score = grade_test($test_score, $question_answers);
+
+    // Update the parsed post data appropriately before making
+    // CURL call to back end
+    $parsed_post_data["fields"] = $test_score;
+
 } else if ($action == "delete") {
     // TODO: Do table-specific validation for delete
 } else if ($action == "list") {
@@ -142,14 +166,45 @@ http_response_code(200);
 header('Content-Type: application/json');
 exit($backend_json_response);
 
+/*
+ * Method for getting an existing test_score
+ * by its primary key
+ */
+function get_test_score($primary_key) {
+    global $BACKEND_ENDPOINTS;
+    // echo "In get_test_score...<br/>";
+    $post_data["table_name"] = "test_score";
+    $post_data["action"] = "list";
+    $post_data["fields"] = array("primary_key" => $primary_key);
+    $backend_endpoint = $BACKEND_ENDPOINTS["question_answer"];
+    $new_post_params = array("json_string" => json_encode($post_data));
+    // Function takes a header arg, but not necessary here
+    $header = array(); 
+    $backend_json_response = curl_to_backend($header, 
+                                             $backend_endpoint, 
+                                             http_build_query($new_post_params));
+    $response = json_decode($backend_json_response, true);
+    // echo "Response from get_test_score:<br/>";
+    // print_r($response);
+    // We expect one item in the items array within the parsed response
+    // If it is there, return it.
+    if (isset($response["items"][0]) && !empty($response["items"])) {
+        return $response["items"][0];
+    } else {
+        // echo "In else clause...";
+        // echo "Value of backend_json_response: $backend_json_response...";
+        return false;
+    }
+}
 
 /*
  * Method for getting DB records necessary to grade test
  */
-
 function get_question_answers($test_score) {
-    // TODO
     global $BACKEND_ENDPOINTS;
+    // echo "<br/>Value of test_score<br/>";
+    // print_r($test_score);
+    // echo "<br/>END of test_score<br/>";
     $student_id = $test_score["student_id"];
     // echo "value of student_id: $student_id";
     $test_id = $test_score["test_id"];
@@ -189,23 +244,18 @@ function get_question_answers($test_score) {
  */
 
 function grade_test($test_score, $question_answers) {
-    // Calculate the maximum number of points possible
-    $max_points = 10 * count($question_answers);
-    if ($max_points == 0) {
-        // Avoid divide by zero
-        $max_points = 1;
-        // Though this should never happen...
-    }
-
+    // Count of total possible points
+    $max_points = 0;
     // Calculate points actually earned
-    $sum_points = 0;
+    $raw_points = 0;
     foreach ($question_answers as $answer) {
-        $sum_points += (int)$answer["grade"];
+        $max_points += (int)$answer["point_value"];
+        $raw_points += (int)$answer["grade"];
     }
 
     /*
      * Grading the test:
-     * - Each question_answer has been graded on a ten-point scale
+     * - Each question_answer has been graded on a variable-point scale
      * - We have calculated the sum of question_answer scores ('SUM')
      *   and the maximum numer of possible points ('MAX')
      * - Grade is (SUM/MAX) * 100
@@ -213,9 +263,17 @@ function grade_test($test_score, $question_answers) {
      *     - Result then rounded to the nearest integer using round()
      * - Min grade is 0, max grade is 100
      */
-    $grade = round(($sum_points/(float)$max_points) * 100);
+    
+    // Avoid divide by zero (Though this should never happen...)
+    if ($max_points == 0) {
+        $max_points = 1;
+    }
+
+    $grade = round(($raw_points/(float)$max_points) * 100);
 
     $test_score["grade"] = $grade;
+    $test_score["raw_points"] = $raw_points;
+    $test_score["max_points"] = $max_points;
     return $test_score;
 
 }
