@@ -274,6 +274,7 @@ function grade_question_answer($question_answer, $question, $test_cases) {
         "testCaseCount" => 0,
         "passedTestCases" => 0,
         "comments" => array(),
+        "testCaseResults" => array(),
         "doesFunctionNameMatch" => false,
         "doParametersMatch" => false,
         "questionScore" => 0,
@@ -408,6 +409,8 @@ function grade_question_answer($question_answer, $question, $test_cases) {
             $results["comments"][$i] .= "Test case $i PASSED; for input '" .
                 $test_cases[$i]["input"] . "', expected '" . $expected_output . 
                 "' and received '$output'.";
+            $passedLastTestCase = 1;
+            $pointsEarnedOnThisTestCase = $points_per_test_case;
         } else {
             // echo "<br/>The output $output did not match the expected output " . 
             $expected_output . "<br/><br/>";
@@ -416,7 +419,28 @@ function grade_question_answer($question_answer, $question, $test_cases) {
                 $test_cases[$i]["input"] . "', expected '" . $expected_output . 
                 "' but received '$output'. $points_per_test_case points" .
                 " deducted out of a possible total of $question_point_value.";
+            $passedLastTestCase = 0;
+            $pointsEarnedOnThisTestCase = 0;
         }
+
+        /* 
+         * Populate testCaseResults array with testCaseReult
+         * arrays for easy display of results in table form 
+         */
+
+        // Truncate output strings if longer than 15 characters
+        $truncated_output = strlen($output) > 15 ? substr($output,0,15)."..." : $output;
+        $truncated_expected_output = strlen($expected_output) > 15 ? 
+            substr($expected_output,0,15)."..." : $expected_output;
+        $expected_input_output = $question["func_name"] . "(" . $test_cases[$i]["input"] . 
+            ")" . " -> " . $truncated_expected_output;
+        $testCaseResult = array(
+            "expected" => $expected_input_output,
+            "actual" => $truncated_output,
+            "didItPass" => $passedLastTestCase,
+            "pointsEarned" => $pointsEarnedOnThisTestCase,
+        );
+        $results["testCaseResults"][$i] = $testCaseResult;
 
     }
     fclose($handle);
@@ -444,6 +468,8 @@ function grade_question_answer($question_answer, $question, $test_cases) {
                 "One point deducted.";
         } else {
             $grade = 0;
+            $results["comments"][count($results["comments"])] = 
+                "Function name does not match specified function name.";
         }
     }
     if (!$results["doParametersMatch"]) {
@@ -454,6 +480,9 @@ function grade_question_answer($question_answer, $question, $test_cases) {
                 "the specified parameter name(s). One point deducted.";
         } else {
             $grade = 0;
+            $results["comments"][count($results["comments"])] = 
+                "The names of the function's parameter(s) do not match " . 
+                "the specified parameter name(s).";
         }
     }
     $results["comments"][count($results["comments"])] = 
