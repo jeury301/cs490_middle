@@ -8,7 +8,7 @@
    - Requirements of course prohibited use of frameworks/libraries (**no** Bootstrap, JQuery, Angular, Laravel, etc.)
   - Allows professors to maintain a question bank of programming exercises and to create tests consisting of interactive programming exercises
   - Includes a component that automatically grades students' answers to programming exercises, with provisions for partial credit based on test cases passed
-  - [Watch the demonstration on YouTube](https://www.youtube.com/watch?v=3GO7frlFeGQ)
+  - [Watch the demonstration on YouTube](https://youtu.be/qNahJ7HPGjk)
 
 __Managing the question bank__
 ![Managing the question bank](readme_images/readme_question_bank_management.png)
